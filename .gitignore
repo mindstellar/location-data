@@ -14,7 +14,13 @@ countries-states-cities.json
 dump-scan/
 dump-build/
 
-# R2 credentials, if anyone is tempted to keep them beside the code.
+# R2 credentials. .env is read automatically by tools/r2.py when it sits in
+# the repository root; .env.example is the committed template and carries no
+# secret. The trailing patterns catch editor backups and swap files, which
+# ".env" alone does not match.
 .env
+.env.*
+!.env.example
 .envrc
 r2-credentials*
+*.env.swp

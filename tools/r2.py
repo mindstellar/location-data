@@ -9,14 +9,24 @@ things differ from S3 in ways that matter here:
     decompressing first.
   * there are no regions. `region_name` has to be "auto".
 
-Credentials come from the environment, never from the repository:
+Credentials come from three variables:
 
     R2_ACCOUNT_ID          the account the bucket belongs to
     R2_ACCESS_KEY_ID       from an R2 API token
     R2_SECRET_ACCESS_KEY
 
+set in the environment, or in a `.env` in the repository root, which is read
+automatically and is gitignored. See `.env.example`. Anything already exported
+wins over the file, so a one-off `R2_BUCKET=... python tools/publish.py` works
+as expected.
+
 Create the token at Cloudflare dashboard -> R2 -> Manage API tokens, with
 Object Read & Write on this bucket alone.
+
+The endpoint is built from R2_ACCOUNT_ID and never defaults to anything. That
+matters: an S3 client with no endpoint talks to AWS, and a machine with working
+AWS credentials would then succeed against the wrong provider rather than fail.
+Here a wrong account id is a DNS error.
 """
 
 import concurrent.futures
@@ -24,6 +34,33 @@ import hashlib
 import os
 import sys
 import threading
+
+
+def _load_dotenv():
+    """Read .env from the repository root into the environment.
+
+    Deliberately does not overwrite anything already set, so an explicit export
+    or a one-off VAR=... prefix beats the file. No dependency: the format is
+    KEY=VALUE, # comments, and optional surrounding quotes.
+    """
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+    try:
+        with open(path, encoding='utf-8') as handle:
+            lines = handle.readlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, _, value = line.partition('=')
+        key = key.strip()
+        value = value.strip().strip('\'"')
+        if key and value and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_dotenv()
 
 BUCKET = os.environ.get('R2_BUCKET', 'location-data')
 

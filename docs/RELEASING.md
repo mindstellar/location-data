@@ -27,14 +27,32 @@ API token*, with **Object Read & Write**, scoped to the `location-data` bucket
 alone. It gives you three values:
 
 ```bash
+cp .env.example .env && chmod 600 .env      # then fill in the two key values
+```
+
+`.env` is gitignored and read automatically, so nothing needs exporting.
+Anything already in the environment wins over the file, so a one-off
+`R2_BUCKET=scratch python tools/publish.py …` behaves as expected.
+
+Exported variables work equally well if you would rather keep credentials out
+of the working tree entirely:
+
+```bash
 export R2_ACCOUNT_ID=...          # also visible in any R2 endpoint URL
 export R2_ACCESS_KEY_ID=...
 export R2_SECRET_ACCESS_KEY=...
 ```
 
-Put them somewhere your shell reads and **not in this repository**. Nothing
-here writes them to disk, and `tools/r2.py` reads them from the environment
-only.
+Worth making **two** tokens. Object Read & Write for publishing, and a separate
+Object Read Only for anything that only consumes releases — an import, a
+Worker, a restore. The read-only one ends up in more places and cannot
+overwrite a release if it leaks.
+
+Do not put R2 credentials in `~/.aws/credentials` alongside AWS ones. R2 only
+works because the endpoint points at `<account>.r2.cloudflarestorage.com`; an
+S3 client with no endpoint talks to AWS instead, and on a machine with working
+AWS credentials that mistake *succeeds* against the wrong provider rather than
+failing. Keeping the two apart makes it impossible.
 
 ## The whole refresh
 
