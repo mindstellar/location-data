@@ -56,6 +56,12 @@ again:
 `--skip dump,scan` to rebuild from a scan you already have. `--dry-run` does
 everything except write to R2. `--rescan` forces stage 1 to redo itself.
 
+Publishing is gated on `validate.py`, which compares the new build against the
+currently published release — not against a git ref, and not against nothing.
+Without credentials it fails rather than skipping, so the gate cannot quietly
+disappear. On the very first publish there is nothing to compare against and it
+says so.
+
 **A month in which nothing changed produces no release.** The build is byte
 deterministic, so an unchanged Wikidata gives an identical `s_version`, and
 `publish.py` refuses to mint a release that already exists. That is the same

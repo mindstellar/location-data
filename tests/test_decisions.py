@@ -38,7 +38,11 @@ from contain import (  # noqa: E402
 )
 from countryblock import extra_fields  # noqa: E402
 from naming import resolve_name_full, romanise  # noqa: E402
-from validate import capital_presence  # noqa: E402
+from validate import (  # noqa: E402
+    BASELINE_DEFAULT,
+    capital_presence,
+    resolve_baseline,
+)
 
 
 def edges(*pairs):
@@ -540,3 +544,32 @@ class FormerPlacesAndMiscategorisedBranches(unittest.TestCase):
         self.assertNotIn(4, closure, 'a battery is not an administrative division')
         self.assertIn(2, closure, 'the blocked class itself stays')
         self.assertIn(9, closure, 'the rest of the closure is untouched')
+
+
+class BaselineResolution(unittest.TestCase):
+    """Which "before" the regression gates compare against.
+
+    This is here because the gates were dead and nothing noticed. The default
+    used to be a git ref in a repository that no longer exists, so every run
+    printed one line about skipping and passed -- the per-country gate exists
+    to stop a country being gutted unnoticed, and it was itself gutted
+    unnoticed."""
+
+    def test_none_is_an_explicit_no_baseline(self):
+        self.assertIsNone(resolve_baseline('none'))
+        self.assertIsNone(resolve_baseline(''))
+        self.assertIsNone(resolve_baseline(None))
+
+    def test_a_path_is_read_as_a_manifest(self):
+        with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as handle:
+            json.dump({'locations': [{'s_country_code': 'MT', 'i_cities': 7}]}, handle)
+            path = handle.name
+        try:
+            self.assertEqual(7, resolve_baseline(path)['locations'][0]['i_cities'])
+        finally:
+            os.unlink(path)
+
+    def test_the_default_is_the_published_release(self):
+        # Not a git ref. A ref has to be remembered and updated by hand, and
+        # when it stops resolving the gate disappears in silence.
+        self.assertEqual('r2', BASELINE_DEFAULT)

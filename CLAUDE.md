@@ -42,6 +42,8 @@ python dump_build.py --scan-dir dump-scan --bucket-dir /tmp/b    # keep the grou
 # SPARQL pipeline (superseded, useful as a cross-check on a few countries)
 python build_wikidata.py --countries AL,IN,DE --keep-going
 
+python validate.py                              # vs the published release (needs R2 creds)
+python validate.py --baseline none              # first build, or offline
 python validate.py --baseline path/to/previous/json-list.json
 
 # checks, in ascending order of cost and confidence
@@ -188,8 +190,15 @@ an existing value is a migration for everyone:
 
 ## Validation thresholds
 
-`validate.py` fails on loss, never on growth. The per-country gate is the one
-that matters: the global sums pass comfortably while individual countries are
+`validate.py` fails on loss, never on growth. It compares against **the
+published release** by default, and without R2 credentials it exits non-zero
+rather than skipping — a gate that disables itself when it cannot reach its
+baseline is worse than no gate, and that is not hypothetical: the default used
+to be a git ref in a repository that no longer existed, so both regression
+gates were dead and every run printed one line about skipping and passed. Use
+`--baseline none` for a first build or offline work.
+
+The per-country gate is the one that matters: the global sums pass comfortably while individual countries are
 gutted, which is exactly how a source swap ships an eightfold overall gain
 alongside a country that lost 98% of its cities. A drop that is investigated
 and genuinely upstream sparsity goes in `validate_allowlist.txt` with the

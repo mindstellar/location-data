@@ -43,23 +43,54 @@ MIN_COORD_COVERAGE = 0.99
 # 8x global gain hides a 98% loss in one country). This one compares each
 # country to its own prior count, not the total.
 MIN_CITY_RATIO = 0.70
-# feat/coordinates-and-refresh, not HEAD: that manifest carries i_cities per
-# country; the one on master predates the field and would make every country
-# "0 -> N" instead of a real ratio.
-PER_COUNTRY_BASELINE_REF = 'feat/coordinates-and-refresh'
 ALLOWLIST_PATH = 'validate_allowlist.txt'
 
+# What "before" means. The published release, not a git ref.
+#
+# This used to be a branch name in a repository that no longer exists, so
+# `git show <ref>:src/json-list.json` failed, load_ref_manifest returned None,
+# and the gate printed one line about skipping and passed. Both regression
+# gates were dead for weeks without anything going red -- which is the exact
+# failure the per-country gate exists to prevent, turned on the gate itself.
+#
+# The published release is the right baseline anyway: it is what consumers
+# actually have, it always carries i_cities, and it cannot drift out of date
+# the way a hand-maintained ref does.
+BASELINE_DEFAULT = 'r2'
 
-def load_baseline(path):
-    if path:
-        with open(path, encoding='utf-8') as handle:
-            return json.load(handle)
-    try:
-        blob = subprocess.check_output(['git', 'show', 'HEAD:' + MANIFEST],
-                                       stderr=subprocess.DEVNULL)
-    except subprocess.CalledProcessError:
+
+def load_r2_manifest():
+    """The manifest of the currently published release.
+
+    Returns None when nothing has been published yet, which is a real state on
+    a first run and legitimately means "no baseline". Anything else -- missing
+    credentials, an unreachable bucket -- raises, because a gate that quietly
+    disables itself when it cannot reach its baseline is worse than no gate.
+    """
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tools'))
+    import r2
+    pointer = r2.read_json('releases/latest.json')
+    if pointer is None:
         return None
-    return json.loads(blob.decode('utf-8'))
+    return r2.read_json(pointer['manifest'])
+
+
+def resolve_baseline(spec):
+    """A manifest to compare against, from one of:
+
+        r2         the currently published release (default)
+        none       explicitly no baseline, for a first build
+        <path>     a manifest file
+        <git-ref>  a git ref carrying src/json-list.json
+    """
+    if spec in (None, '', 'none'):
+        return None
+    if spec == 'r2':
+        return load_r2_manifest()
+    if os.path.exists(spec):
+        with open(spec, encoding='utf-8') as handle:
+            return json.load(handle)
+    return load_ref_manifest(spec)
 
 
 def load_ref_manifest(ref):
@@ -97,17 +128,15 @@ def load_allowlist(path=ALLOWLIST_PATH):
     return allowed
 
 
-def per_country_regression(new, baseline_ref):
+def per_country_regression(new, baseline):
     """Countries whose city count fell below MIN_CITY_RATIO of their count in
     baseline_ref. Returns (blocking, allowlisted) -- two lists of
     (code, old_n, new_n, ratio), worst ratio first. Only 'blocking' should
     fail the build; 'allowlisted' is printed too, so the allowlist stays
     visible rather than silently suppressing the signal.
     """
-    baseline = load_ref_manifest(baseline_ref)
     if baseline is None:
-        print('no per-country baseline at %s:%s -- skipping the per-country city gate'
-              % (baseline_ref, MANIFEST))
+        print('no published release to compare against -- skipping the per-country gate')
         return [], []
 
     old_by_code = {e['s_country_code']: e.get('i_cities', 0) for e in baseline['locations']}
@@ -216,10 +245,10 @@ def coord_coverage():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--baseline', help='manifest to compare against')
-    parser.add_argument('--per-country-baseline-ref', default=PER_COUNTRY_BASELINE_REF,
-                        help='git ref to compare per-country city counts against (default: %s)'
-                             % PER_COUNTRY_BASELINE_REF)
+    parser.add_argument('--baseline', default=BASELINE_DEFAULT,
+                        help="what to compare against: 'r2' (the published "
+                             "release, default), 'none', a manifest path, or a "
+                             "git ref")
     args = parser.parse_args()
 
     with open(MANIFEST, encoding='utf-8') as handle:
@@ -235,7 +264,7 @@ def main():
         failures.append('coordinate coverage %.2f%% is below the %.0f%% floor'
                         % (100 * coverage, 100 * MIN_COORD_COVERAGE))
 
-    baseline = load_baseline(args.baseline)
+    baseline = resolve_baseline(args.baseline)
     if baseline is None:
         print('no baseline to compare against; skipping regression checks')
     else:
@@ -272,7 +301,7 @@ def main():
             failures.append('%d of %d countries do not contain their own capital'
                             % (len(missing_capitals), total))
 
-    blocking, _allowlisted = per_country_regression(new, args.per_country_baseline_ref)
+    blocking, _allowlisted = per_country_regression(new, baseline)
     if blocking:
         failures.append('%d countries fell below %.0f%% of their baseline city count (see list above)'
                         % (len(blocking), 100 * MIN_CITY_RATIO))
