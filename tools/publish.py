@@ -11,6 +11,9 @@ Layout in the bucket:
     releases/<version>/data/<CC>.ndjson    canonical records
     releases/<version>/{json,csv,ndjson}/  the per-country distribution
     releases/latest.json                   which version is current
+
+and in a second bucket, which never gets a public domain:
+
     cache/<version>.tar.gz                 the query cache, one object
     cache/latest.json
 
@@ -146,8 +149,9 @@ def publish_cache(args):
     version = args.version or datetime.date.today().isoformat()
     key = 'cache/%s.tar.gz' % version
 
-    if r2.exists(key) and not args.force:
-        sys.exit('%s already exists. Pass --force to overwrite.' % key)
+    if r2.exists(key, r2.CACHE_BUCKET) and not args.force:
+        sys.exit('%s already exists in %s. Pass --force to overwrite.'
+                 % (key, r2.CACHE_BUCKET))
 
     entries = sorted(os.listdir(cache_dir))
     print('packing %d cache files...' % len(entries), flush=True)
@@ -168,22 +172,24 @@ def publish_cache(args):
         print('  %.0f MB packed, uploading...' % (size / 1e6), flush=True)
         if args.dry_run:
             return 0
-        r2.put(temp_path, key)
+        r2.put(temp_path, key, r2.CACHE_BUCKET)
         r2.put_bytes(json.dumps({
             'version': version, 'key': key, 'files': len(entries), 'bytes': size,
             'sha256': r2.sha256(temp_path),
             'backed_up': datetime.datetime.now(datetime.timezone.utc)
                                  .replace(microsecond=0).isoformat(),
-        }, indent=2, sort_keys=True).encode('utf-8'), 'cache/latest.json')
-        print('backed up to r2://%s/%s' % (r2.BUCKET, key))
+        }, indent=2, sort_keys=True).encode('utf-8'), 'cache/latest.json',
+            r2.CACHE_BUCKET)
+        print('backed up to r2://%s/%s' % (r2.CACHE_BUCKET, key))
     finally:
         os.unlink(temp_path)
     return 0
 
 
 def status(args):
-    for name, key in (('release', 'releases/latest.json'), ('cache', 'cache/latest.json')):
-        pointer = r2.read_json(key)
+    for name, key, bucket in (('release', 'releases/latest.json', r2.BUCKET),
+                              ('cache', 'cache/latest.json', r2.CACHE_BUCKET)):
+        pointer = r2.read_json(key, bucket)
         if pointer is None:
             print('%-8s nothing published' % name)
             continue

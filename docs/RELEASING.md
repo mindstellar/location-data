@@ -85,6 +85,18 @@ deterministic, so an unchanged Wikidata gives an identical `s_version`, and
 `publish.py` refuses to mint a release that already exists. That is the same
 property the abandoned GitHub workflow depended on, and it is worth keeping.
 
+## Two buckets, and why
+
+`location-data` holds releases and is published at **https://geo.mindstellar.com**.
+`location-data-cache` holds the query-cache backup and has no domain, ever.
+
+They are separate because a custom domain publishes an entire bucket. With the
+cache in the same one, a 173 MB tarball of SPARQL responses would sit on a
+public URL next to the data, get crawled, and serve no one. Separate buckets
+make that impossible rather than merely discouraged. Scope publishing tokens to
+both; a token for only one will fail with `AccessDenied` on the other, which is
+how it should behave.
+
 ## What lands in the bucket
 
 ```
@@ -95,9 +107,37 @@ releases/<version>/json/…             per-country, the shape installs fetch
 releases/<version>/csv/…
 releases/<version>/ndjson/…
 releases/latest.json                  which version is current
+```
+
+and in `location-data-cache`, which is not public:
+
+```
 cache/<version>.tar.gz                the query cache, one object
 cache/latest.json
 ```
+
+## The edge
+
+`geo.mindstellar.com` is an R2 custom domain, not the managed `r2.dev` one.
+That matters: `r2.dev` is rate-limited, documented as non-production, and does
+not get the CDN cache, so every request would reach R2.
+
+Two cache rules on the zone, and **their order is load-bearing**. Every
+matching rule in a cache ruleset applies in sequence and the last one wins, so
+the broad rule comes first and the specific override second:
+
+1. `/releases/*` — 30 days at the edge, 1 day in the browser. Versioned files
+   never change.
+2. `/releases/latest.json` — 60 seconds. This is how a new release is noticed;
+   with the rules the other way round it inherited the 30-day TTL and a
+   release would have been invisible for a month.
+
+The edge also compresses on the fly, which is what makes storing the files
+uncompressed the right call rather than a compromise. Measured on the worst
+case, `json/MX-Mexico.json`: **76.5 MB uncompressed, 5.7 MB over the wire with
+Brotli, 13.5x**. The client decompresses transparently, so the sha256 in the
+manifest still verifies against what it receives — the thing pre-compressed
+objects would have broken.
 
 Uncompressed, deliberately. The manifest carries a sha256 of each file's exact
 bytes, and a consumer that fetches one country should be able to verify what it

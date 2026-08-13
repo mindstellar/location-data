@@ -64,6 +64,13 @@ _load_dotenv()
 
 BUCKET = os.environ.get('R2_BUCKET', 'location-data')
 
+# The query cache lives in its own bucket, and that is not tidiness. The
+# releases bucket gets a custom domain, which publishes everything in it; a
+# 173 MB tarball of SPARQL responses on a public URL is noise that will get
+# crawled. Separate buckets make the mistake impossible rather than guarded
+# against, and the cache bucket simply never gets a domain.
+CACHE_BUCKET = os.environ.get('R2_CACHE_BUCKET', 'location-data-cache')
+
 # What each format is, so a browser fetching a country renders rather than
 # downloads it. R2 stores whatever it is told and serves it back verbatim.
 CONTENT_TYPES = {

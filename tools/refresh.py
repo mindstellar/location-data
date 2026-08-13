@@ -60,14 +60,14 @@ def stage_cache(args):
     if os.path.isdir(target) and os.listdir(target):
         print('cache: %d files already at %s' % (len(os.listdir(target)), target))
         return
-    pointer = r2.read_json('cache/latest.json')
+    pointer = r2.read_json('cache/latest.json', r2.CACHE_BUCKET)
     if pointer is None:
         print('cache: nothing in R2 to restore, and nothing on disk. Skipping.')
         return
     print('cache: restoring %s (%d files, %.0f MB) from R2'
           % (pointer['key'], pointer['files'], pointer['bytes'] / 1e6), flush=True)
     archive = os.path.join(os.path.dirname(target.rstrip('/')), 'cache-restore.tar.gz')
-    r2.get(pointer['key'], archive)
+    r2.get(pointer['key'], archive, r2.CACHE_BUCKET)
     if pointer.get('sha256') and r2.sha256(archive) != pointer['sha256']:
         sys.exit('cache: sha256 mismatch on the restored archive; refusing to unpack')
     os.makedirs(target, exist_ok=True)

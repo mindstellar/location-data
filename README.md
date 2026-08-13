@@ -4,9 +4,18 @@ A worldwide dataset of countries, administrative divisions and settlements,
 built from Wikidata, plus the scripts that build it.
 
 **255 countries, 6,036 administrative divisions, 1,745,358 settlements**, every
-one with coordinates. The data is published to Cloudflare R2 rather than kept
-in git — see `docs/RELEASING.md`. What is in this repository is the pipeline
-that produces it.
+one with coordinates.
+
+```bash
+curl -s https://geo.mindstellar.com/releases/latest.json
+curl -s --compressed https://geo.mindstellar.com/releases/2026-08-13/json/MT-Malta.json
+```
+
+The data is published to object storage rather than kept in git — see
+`docs/RELEASING.md`. What is in this repository is the pipeline that produces
+it. Every file's sha256 is in the manifest, so a fetch can be verified; use
+`--compressed`, since the edge compresses on the fly and Mexico is 76 MB
+otherwise.
 
 ## Why
 
