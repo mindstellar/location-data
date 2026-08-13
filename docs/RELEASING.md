@@ -131,6 +131,32 @@ the broad rule comes first and the specific override second:
    with the rules the other way round it inherited the 30-day TTL and a
    release would have been invisible for a month.
 
+Two things about the edge that are not obvious and both cost time to find.
+
+**A cache rule change does not purge what is already cached.** `releases/latest.json`
+was first cached while it still inherited the 30-day rule, so after the rules
+were fixed the edge kept serving a three-hour-old pointer with `age: 10459` and
+`cache-control: max-age=60` side by side. New entries honour the new rule;
+existing ones do not. After changing a rule, or after republishing a version
+with `--force`, purge explicitly:
+
+```
+POST /zones/<zone>/purge_cache   {"files": ["https://geo.mindstellar.com/releases/latest.json"]}
+```
+
+An ordinary publish needs no purge: it writes a new version prefix, and the
+pointer's own 60-second TTL carries it.
+
+**The zone's security settings blocked a legitimate client.** Browser Integrity
+Check returned 403 to `Python-urllib/3.11` — not the WAF, not Bot Fight Mode,
+which were both off or irrelevant. `python-requests`, `curl`, `wget`, Go and
+Java all passed, so it was invisible until something fetched with the Python
+standard library. A custom firewall rule now skips `bic`, `uaBlock`,
+`securityLevel`, `waf`, `hot` and `zoneLockdown` for `geo.mindstellar.com`
+only; every other hostname on the zone keeps them. A host serving immutable
+public files with no auth and no writes has nothing for those products to
+protect, and they can only produce false positives like that one.
+
 The edge also compresses on the fly, which is what makes storing the files
 uncompressed the right call rather than a compromise. Measured on the worst
 case, `json/MX-Mexico.json`: **76.5 MB uncompressed, 5.7 MB over the wire with
