@@ -41,7 +41,7 @@ python dump_build.py --scan-dir dump-scan --bucket-dir /tmp/b    # keep the grou
 
 python validate.py <build-dir>                  # vs the published release (needs R2 creds)
 python validate.py <build-dir> --baseline none   # first build, or offline
-python validate.py <build-dir> --baseline path/to/previous/json-list.json
+python validate.py <build-dir> --baseline path/to/previous/manifest.json
 
 # checks, in ascending order of cost and confidence
 python -m unittest discover -s tests            # ~1 s, no scan needed
@@ -89,7 +89,7 @@ classify.py     the subclass closures, the three kinds of exclusion, is_settleme
 contain.py      P131 propagation, the four division tiers, CountryPlan
 naming.py       resolve_name and what makes a label usable at all
 countryblock.py the per-entity and per-country fact blocks
-emit.py         assembling a country and writing the canonical ndjson
+emit.py         assembling a country and writing all three output formats
 dump_build.py   the index pass and the orchestration
 ```
 

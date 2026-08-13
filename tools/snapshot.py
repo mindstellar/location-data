@@ -31,31 +31,30 @@ def digest_file(path):
 
 
 def snapshot(build_dir):
-    manifest_path = os.path.join(build_dir, 'json-list.json')
-    with open(manifest_path, encoding='utf-8') as handle:
+    """Fingerprint all three published formats.
+
+    All three, deliberately: a change that broke only the CSV writer while
+    data/ and json/ stayed identical would otherwise pass.
+    """
+    with open(os.path.join(build_dir, 'manifest.json'), encoding='utf-8') as handle:
         manifest = json.load(handle)
 
     countries = {}
-    for entry in manifest['locations']:
-        code = entry['s_country_code']
-        csv_name = entry['s_file_name'][:-len('.json')] + '.csv'
-        csv_path = os.path.join(build_dir, 'csv', csv_name)
+    for entry in manifest['countries']:
+        code = entry['code']
         countries[code] = {
-            'name': entry['s_country_name'],
-            'regions': entry['i_regions'],
-            'cities': entry['i_cities'],
-            'sha256_json': entry['s_sha256'],
-            'sha256_ndjson': entry['s_sha256_ndjson'],
-            'sha256_data': entry['s_sha256_data'],
-            # Not in the manifest, and a refactor could break the CSV writer
-            # while every other format stayed identical.
-            'sha256_csv': digest_file(csv_path) if os.path.exists(csv_path) else None,
+            'name': entry['name'],
+            'regions': entry['regions'],
+            'cities': entry['settlements'],
+            'sha256_data': entry['sha256']['data'],
+            'sha256_json': entry['sha256']['json'],
+            'sha256_csv': entry['sha256']['csv'],
         }
 
     return {
-        's_version': manifest['s_version'],
-        's_source': manifest['s_source'],
-        's_license': manifest['s_license'],
+        's_version': manifest['version'],
+        's_source': manifest['source'],
+        's_license': manifest['license'],
         'countries_total': len(countries),
         'regions_total': sum(c['regions'] for c in countries.values()),
         'cities_total': sum(c['cities'] for c in countries.values()),

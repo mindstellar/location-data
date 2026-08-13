@@ -18,8 +18,28 @@ outside single-zone countries. Those three have specific causes, given below.
 | settlements | 1,745,358 |
 | with coordinates | 100% |
 
-`json-list.json` reports 1,745,876 cities rather than 1,745,358. The difference
-is 518 synthesised rows — see *Synthesised cities* below.
+Every row is a place Wikidata records. Nothing is synthesised to round the
+numbers out or to keep a region from looking empty.
+
+## Formats
+
+Each release carries the same records three ways, under
+`releases/<version>/`:
+
+| | |
+|---|---|
+| `data/<CC>.ndjson` | one JSON object per line — country, then each region followed by its settlements. Streamable in constant memory, which matters: the largest country is 76 MB. |
+| `json/<CC>.json` | the same record as one nested document |
+| `csv/<CC>.csv` | one row per settlement, flat |
+
+`manifest.json` lists every country with its file paths, sha256 of each, and
+counts. Fetch that first; it is the only URL worth hardcoding, and files are
+named by ISO code so a country being renamed upstream cannot move one.
+
+Field names are this dataset's own and deliberately neutral. An earlier release
+also published a copy in a particular consumer's column conventions; it was
+removed, because two formats to keep consistent is a cost paid forever and
+mapping field names on the way in is a few lines paid once.
 
 ## Field coverage
 
@@ -27,7 +47,7 @@ Per settlement:
 
 | field | fill |
 |---|---:|
-| name, slug, latitude, longitude, place_type, country_code | 100% |
+| name, slug, latitude, longitude, place_type, country_code, source | 100% |
 | admin2_id | 98.3% |
 | timezone_id | 46.6% |
 | geonames_id | 45.1% |
@@ -115,11 +135,6 @@ Rico, Hong Kong, Aruba and Åland ship as their own countries and do *not* also
 appear in the region list of France, the United States, China, the Netherlands
 or Finland. Listing them in both places would put one place under two ids.
 
-**Synthesised cities.** A region with no settlements of its own is emitted as a
-single city with the same name and the region's coordinates, so a picker never
-offers an empty region. Its `i_source_id` is the region's id negated, which is
-how you identify one: 518 rows in the current build.
-
 **Country-level regions.** A settlement whose containment reaches no division
 is filed under a region named for the country itself rather than dropped. This
 is why some countries have a region with the same name as the country.
@@ -134,6 +149,11 @@ classes to be historical.
 is overwhelmingly an addressing unit — gazetted localities of Victoria and
 Tasmania — and an Australian address names its suburb. Neighbourhoods are
 informal, overlapping and have no postal identity.
+
+**Every row names its source.** `source` is `wikidata` on every row today. It
+exists because ids from a second source would otherwise share an integer space
+with Wikidata QIDs and nothing would tell them apart — which is exactly the
+defect an earlier release caused in a consumer that matched on the id alone.
 
 ## Smaller things
 

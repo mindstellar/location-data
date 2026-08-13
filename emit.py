@@ -1,5 +1,11 @@
 """Assembling one country's record, and writing it out.
 
+Field names are this dataset's own -- `name`, `latitude`, `place_type` -- and
+neutral by intent. A consumer whose schema differs maps them on the way in;
+publishing a second copy in someone else's column conventions was tried and
+removed, because it doubled the formats to keep consistent and put 518
+synthesised places into a reference dataset.
+
 `build_country` is where the earlier stages meet: the settlements grouped by
 containment, the divisions selected for the country, the names resolved for
 both, and the country block. It produces the canonical record -- neutral field
@@ -7,15 +13,24 @@ names, nothing synthesised, a region with no settlements simply carrying an
 empty list -- and `write_canonical_ndjson` streams it.
 
 The consumer-specific formats are not written here. They are generated from the
-canonical record by adapter_shopclass, so the two shapes cannot drift.
 """
 
+import csv
 import hashlib
 import json
 import os
 import re
 
 from contracts import COUNTRY_NAME_OVERRIDES, coord, mean_coord, remove_accents, slugify
+
+# Which upstream the ids on these rows belong to. A constant today, and that is
+# exactly why it is worth writing now: the roadmap adds NGA GNS for the
+# coordinates and Arabic names Wikidata lacks, and the moment two sources share
+# a row's integer id space without a discriminator you get the defect this
+# dataset already caused downstream -- an importer matching a Wikidata QID
+# against an unrelated id from another source and overwriting the wrong place.
+# Adding a field is safe; changing what an existing one means is a migration.
+SOURCE = 'wikidata'
 from classify import is_settlement
 from countryblock import country_extra, extra_fields, official_language, parse_point
 from naming import resolve_name, resolve_name_full
@@ -100,6 +115,7 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
                     continue
                 settlement = {
                     'id': record['id'],
+                    'source': SOURCE,
                     'admin1_id': admin1_qid,
                     'country_code': iso2,
                     'name': clean,
@@ -138,6 +154,7 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
 
         region = {
             'id': admin1_qid,
+            'source': SOURCE,
             'country_code': iso2,
             'name': name,
             'slug': slugify(name),
@@ -153,6 +170,7 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
 
     country = {
         'id': country_qid,
+        'source': SOURCE,
         'code': iso2,
         'name': country_name,
         'slug': slugify(country_name),
@@ -171,16 +189,18 @@ def write_canonical_ndjson(country, data_dir):
                   'osm_relation_id', 'capital_of', 'sitelinks', 'admin2_id')
 
     country_line = {
-        'type': 'country', 'id': country['id'], 'code': country['code'],
+        'type': 'country', 'id': country['id'], 'source': country['source'],
+        'code': country['code'],
         'name': country['name'], 'slug': country['slug'],
     }
     country_line.update({k: v for k, v in country.items()
-                         if k not in ('id', 'code', 'name', 'slug', 'regions')})
+                         if k not in ('id', 'source', 'code', 'name', 'slug', 'regions')})
     lines = [json.dumps(country_line, separators=(',', ':'), ensure_ascii=False)]
 
     for region in country['regions']:
         line = {
-            'type': 'region', 'id': region['id'], 'country_code': region['country_code'],
+            'type': 'region', 'id': region['id'], 'source': region['source'],
+            'country_code': region['country_code'],
             'name': region['name'], 'slug': region['slug'], 'name_lang': region['name_lang'],
             'iso_3166_2': region['iso_3166_2'],
             'latitude': region['latitude'], 'longitude': region['longitude'],
@@ -196,4 +216,60 @@ def write_canonical_ndjson(country, data_dir):
     with open(os.path.join(data_dir, filename), 'w', encoding='utf-8') as out:
         out.write(payload)
     encoded = payload.encode('utf-8')
+    return filename, hashlib.sha256(encoded).hexdigest(), len(encoded)
+
+
+# --- the neutral distribution ------------------------------------------------
+#
+# The same canonical record as data/<CC>.ndjson, in the two shapes a consumer
+# who is not streaming will reach for. Named by ISO code alone: json/MT.json
+# rather than json/MT-Malta.json, because a country name is a mutable thing --
+# COUNTRY_NAME_OVERRIDES exists precisely because upstream spellings move -- and
+# a renamed country must not silently change its URL.
+
+NEUTRAL_CSV_HEADER = [
+    'country_code', 'country_name',
+    'region_id', 'region_name', 'region_slug',
+    'id', 'name', 'slug', 'latitude', 'longitude',
+    'population', 'place_type', 'timezone_id', 'source',
+]
+
+
+def write_country_json(country, json_dir):
+    """One country as a nested document. Returns (filename, sha256, bytes).
+
+    Compact, not pretty-printed. Nobody opens a 91 MB file in an editor, and
+    indenting Mexico costs 60 MB -- 40% of the file -- to no one's benefit.
+    Sorted keys so two runs over the same data produce the same bytes.
+    """
+    filename = '%s.json' % country['code']
+    payload = json.dumps(country, sort_keys=True, ensure_ascii=False,
+                         separators=(',', ':'))
+    with open(os.path.join(json_dir, filename), 'w', encoding='utf-8') as out:
+        out.write(payload)
+    encoded = payload.encode('utf-8')
+    return filename, hashlib.sha256(encoded).hexdigest(), len(encoded)
+
+
+def write_country_csv(country, csv_dir):
+    """One row per settlement, flat. Returns (filename, sha256, bytes)."""
+    filename = '%s.csv' % country['code']
+    path = os.path.join(csv_dir, filename)
+    with open(path, 'w', encoding='utf-8', newline='') as out:
+        writer = csv.writer(out)
+        writer.writerow(NEUTRAL_CSV_HEADER)
+        for region in country['regions']:
+            for row in region['settlements']:
+                writer.writerow([
+                    country['code'], country['name'],
+                    region['id'], region['name'], region['slug'],
+                    row['id'], row['name'], row['slug'],
+                    row['latitude'], row['longitude'],
+                    row['population'] if row['population'] is not None else '',
+                    row['place_type'] or '',
+                    row['timezone_id'] or '',
+                    row['source'],
+                ])
+    with open(path, 'rb') as handle:
+        encoded = handle.read()
     return filename, hashlib.sha256(encoded).hexdigest(), len(encoded)

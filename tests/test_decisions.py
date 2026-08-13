@@ -272,42 +272,41 @@ class CapitalPresence(unittest.TestCase):
         with open(os.path.join(tmp, 'data', '%s.ndjson' % code), 'w', encoding='utf-8') as out:
             out.write(json.dumps({'type': 'country', 'code': code,
                                   'capital_name': capital}) + '\n')
-        published = '%s-Country.json' % code
+        published = '%s.json' % code
         with open(os.path.join(tmp, 'json', published), 'w', encoding='utf-8') as out:
-            json.dump({'regions': [{'cities': [
-                {'s_city_slug': slug} for slug in cities]}]}, out)
-        return {'s_country_code': code, 's_file_name': published}
+            json.dump({'regions': [{'settlements': [
+                {'slug': slug} for slug in cities]}]}, out)
+        return {'code': code, 'files': {'json': 'json/' + published}}
 
     def test_a_present_capital_counts(self):
         with tempfile.TemporaryDirectory() as tmp:
             entry = self.build(tmp, 'FR', 'Paris', ['paris', 'lyon'])
             present, missing = capital_presence(
-                {'locations': [entry]}, os.path.join(tmp, 'data'), os.path.join(tmp, 'json'))
+                {'countries': [entry]}, os.path.join(tmp, 'data'), os.path.join(tmp, 'json'))
             self.assertEqual((present, missing), (1, []))
 
     def test_a_missing_capital_is_reported(self):
         with tempfile.TemporaryDirectory() as tmp:
             entry = self.build(tmp, 'ES', 'Madrid', ['madridejos', 'barcelona'])
             present, missing = capital_presence(
-                {'locations': [entry]}, os.path.join(tmp, 'data'), os.path.join(tmp, 'json'))
+                {'countries': [entry]}, os.path.join(tmp, 'data'), os.path.join(tmp, 'json'))
             self.assertEqual(present, 0)
             self.assertEqual(missing, [('ES', 'Madrid')])
 
     def test_it_measures_the_published_file_not_the_canonical_one(self):
-        """A city-state whose only row is the synthesised region-as-city does
-        contain its capital; measuring the canonical file alone calls it
-        missing."""
+        """Presence is checked against what a consumer receives, not against
+        the canonical stream, which carries only the country-level block."""
         with tempfile.TemporaryDirectory() as tmp:
             entry = self.build(tmp, 'VA', 'Vatican City', ['vatican-city'])
             present, missing = capital_presence(
-                {'locations': [entry]}, os.path.join(tmp, 'data'), os.path.join(tmp, 'json'))
+                {'countries': [entry]}, os.path.join(tmp, 'data'), os.path.join(tmp, 'json'))
             self.assertEqual((present, missing), (1, []))
 
     def test_a_country_declaring_no_capital_is_not_counted_either_way(self):
         with tempfile.TemporaryDirectory() as tmp:
             entry = self.build(tmp, 'AQ', None, [])
             present, missing = capital_presence(
-                {'locations': [entry]}, os.path.join(tmp, 'data'), os.path.join(tmp, 'json'))
+                {'countries': [entry]}, os.path.join(tmp, 'data'), os.path.join(tmp, 'json'))
             self.assertEqual((present, missing), (0, []))
 
 

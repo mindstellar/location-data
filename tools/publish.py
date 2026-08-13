@@ -6,10 +6,11 @@
 
 Layout in the bucket:
 
-    releases/<version>/json-list.json      the manifest a consumer reads first
+    releases/<version>/manifest.json       the catalog a consumer reads first
     releases/<version>/LICENSE             CC0, beside the data it applies to
-    releases/<version>/data/<CC>.ndjson    canonical records
-    releases/<version>/{json,csv,ndjson}/  the per-country distribution
+    releases/<version>/data/<CC>.ndjson    canonical records, streamable
+    releases/<version>/json/<CC>.json      the same record, nested
+    releases/<version>/csv/<CC>.csv        the same record, flat
     releases/latest.json                   which version is current
 
 and in a second bucket, which never gets a public domain:
@@ -61,32 +62,37 @@ which is a mechanical transformation of CC0 input and carries no new rights.
 """
 
 
+MANIFEST = 'manifest.json'
+
+
 def build_version(build_dir):
-    with open(os.path.join(build_dir, 'json-list.json'), encoding='utf-8') as handle:
-        return json.load(handle)['s_version']
+    with open(os.path.join(build_dir, MANIFEST), encoding='utf-8') as handle:
+        return json.load(handle)['version']
 
 
 def collect(build_dir):
     """Every file that belongs in a release, as (local path, key suffix)."""
     out = []
-    for name in ('json-list.json', 'build-stats.json'):
+    for name in (MANIFEST, 'build-stats.json'):
         path = os.path.join(build_dir, name)
         if os.path.exists(path):
             out.append((path, name))
-    for directory in ('data', 'json', 'csv', 'ndjson'):
+    for directory in ('data', 'json', 'csv'):
         source = os.path.join(build_dir, directory)
         if not os.path.isdir(source):
             continue
         for name in sorted(os.listdir(source)):
-            out.append((os.path.join(source, name), '%s/%s' % (directory, name)))
+            path = os.path.join(source, name)
+            if os.path.isfile(path):
+                out.append((path, '%s/%s' % (directory, name)))
     return out
 
 
 def publish_release(args):
     build_dir = args.path
-    manifest_path = os.path.join(build_dir, 'json-list.json')
+    manifest_path = os.path.join(build_dir, MANIFEST)
     if not os.path.exists(manifest_path):
-        sys.exit('%s has no json-list.json -- is it a build directory?' % build_dir)
+        sys.exit('%s has no %s -- is it a build directory?' % (build_dir, MANIFEST))
 
     s_version = build_version(build_dir)
     version = args.version or datetime.date.today().isoformat()
@@ -120,13 +126,13 @@ def publish_release(args):
     pointer = {
         'version': version,
         's_version': s_version,
-        's_license': manifest.get('s_license'),
-        's_source': manifest.get('s_source'),
-        'countries': len(manifest['locations']),
-        'cities': sum(e['i_cities'] for e in manifest['locations']),
-        'regions': sum(e['i_regions'] for e in manifest['locations']),
+        'license': manifest.get('license'),
+        'source': manifest.get('source'),
+        'countries': len(manifest['countries']),
+        'settlements': sum(e['settlements'] for e in manifest['countries']),
+        'regions': sum(e['regions'] for e in manifest['countries']),
         'bytes': total,
-        'manifest': '%s/json-list.json' % prefix,
+        'manifest': '%s/%s' % (prefix, MANIFEST),
         # Stamped after the build, never during it: a timestamp inside the
         # build would change the fingerprint on every run and make a refresh
         # publish a release that contains nothing new.

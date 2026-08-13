@@ -100,12 +100,11 @@ how it should behave.
 ## What lands in the bucket
 
 ```
-releases/<version>/json-list.json     the manifest a consumer reads first
+releases/<version>/manifest.json      the catalog a consumer reads first
 releases/<version>/LICENSE            CC0, beside the data it applies to
-releases/<version>/data/<CC>.ndjson   canonical records, 21 fields
-releases/<version>/json/…             per-country, the shape installs fetch
-releases/<version>/csv/…
-releases/<version>/ndjson/…
+releases/<version>/data/<CC>.ndjson   canonical records, streamable
+releases/<version>/json/<CC>.json     the same record, nested
+releases/<version>/csv/<CC>.csv       the same record, flat
 releases/latest.json                  which version is current
 ```
 

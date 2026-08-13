@@ -38,11 +38,6 @@ import shutil
 import tempfile
 import time
 
-from adapter_shopclass import (
-    to_shopclass_country,
-    write_shopclass_json_csv,
-    write_shopclass_ndjson,
-)
 from classify import (
     CLOSURE_BLOCKED,
     Q_ADMIN_TERRITORIAL_ENTITY,
@@ -62,7 +57,12 @@ from contain import (
     select_admin1s_with_dissolved,
 )
 from countryblock import single_timezone_by_country
-from emit import build_country, write_canonical_ndjson
+from emit import (
+    build_country,
+    write_canonical_ndjson,
+    write_country_csv,
+    write_country_json,
+)
 
 # Re-exported, not used here. The decision functions moved out of this module
 # but its name is where the tests and tools reach for them, and leaving those
@@ -493,27 +493,29 @@ def main():
         for out in handles.values():
             out.close()
 
-    # Four outputs per country. data/ is the canonical record -- neutral field
-    # names, every fact extraction fetched. The other three are the
-    # distribution a consumer actually fetches, generated from it.
+    # One distribution, in field names that belong to this dataset rather than
+    # to any consumer of it: data/ streams, json/ and csv/ are the same record
+    # for consumers who are not, and manifest.json is the catalog. Named by ISO
+    # code alone, so a country renamed upstream cannot move a URL.
+    #
+    # There was a second family here in a consumer's own column conventions,
+    # including 518 cities synthesised for regions that have none of their own.
+    # Inventing places is a presentation decision and belongs to whoever is
+    # presenting them; a dataset published as a reference should contain what
+    # the source contains and nothing else.
     data_dir = os.path.join(args.out_dir, 'data')
     json_dir = os.path.join(args.out_dir, 'json')
     csv_dir = os.path.join(args.out_dir, 'csv')
-    ndjson_dir = os.path.join(args.out_dir, 'ndjson')
-    manifest_path = os.path.join(args.out_dir, 'json-list.json')
-    for directory in (data_dir, json_dir, csv_dir, ndjson_dir):
+    manifest_path = os.path.join(args.out_dir, 'manifest.json')
+
+    for directory in (data_dir, json_dir, csv_dir):
         os.makedirs(directory, exist_ok=True)
-    for stale in (glob.glob(json_dir + '/*.json') + glob.glob(csv_dir + '/*.csv')
-                  + glob.glob(ndjson_dir + '/*.ndjson')):
-        os.remove(stale)
-    os.makedirs(data_dir, exist_ok=True)
-    for stale in os.listdir(data_dir):
-        if stale.endswith('.ndjson'):
-            os.remove(os.path.join(data_dir, stale))
+        for stale in os.listdir(directory):
+            os.remove(os.path.join(directory, stale))
 
     print('building countries...', flush=True)
     summary = []
-    entries = []
+    neutral = []
     for iso2 in wanted:
         plan = plans[iso2]
         if plan.country_qid is None:
@@ -534,29 +536,37 @@ def main():
             exclude_classes=exclude_classes, coarse=plan.coarse)
 
         data_filename, data_digest, data_bytes = write_canonical_ndjson(country, data_dir)
-
-        shopclass = to_shopclass_country(country)
-        filename, digest, regions, cities = write_shopclass_json_csv(
-            shopclass, json_dir, csv_dir)
-        nd_filename, nd_digest, nd_bytes = write_shopclass_ndjson(shopclass, ndjson_dir)
-        seen = stats['settlements_seen']
-        entries.append({
-            's_country_code': shopclass['s_country_code'],
-            's_country_name': shopclass['s_country_name'],
-            's_country_slug': shopclass['s_country_slug'],
-            's_file_name': filename,
-            's_sha256': digest,
-            's_file_ndjson': nd_filename,
-            'i_bytes_ndjson': nd_bytes,
-            's_sha256_ndjson': nd_digest,
-            's_file_data': data_filename,
-            'i_bytes_data': data_bytes,
-            's_sha256_data': data_digest,
-            'i_regions': regions,
-            'i_cities': cities,
+        json_filename, json_digest, json_bytes = write_country_json(country, json_dir)
+        csv_filename, csv_digest, csv_bytes = write_country_csv(country, csv_dir)
+        regions = len(country['regions'])
+        cities = sum(len(r['settlements']) for r in country['regions'])
+        neutral.append({
+            'code': iso2,
+            'name': country['name'],
+            'slug': country['slug'],
+            'id': country['id'],
+            'source': country['source'],
+            'regions': regions,
+            'settlements': cities,
+            'files': {
+                'data': 'data/' + data_filename,
+                'json': 'json/' + json_filename,
+                'csv': 'csv/' + csv_filename,
+            },
+            'sha256': {
+                'data': data_digest,
+                'json': json_digest,
+                'csv': csv_digest,
+            },
+            'bytes': {
+                'data': data_bytes,
+                'json': json_bytes,
+                'csv': csv_bytes,
+            },
         })
+        seen = stats['settlements_seen']
         summary.append({
-            'code': iso2, 'name': country['name'], 'file': filename,
+            'code': iso2, 'name': country['name'], 'file': json_filename,
             'regions': regions, 'cities': cities,
             'settlements_seen': seen, 'orphan': stats['orphan'],
             'orphan_rate': round(stats['orphan'] / seen, 4) if seen else None,
@@ -573,18 +583,25 @@ def main():
     # fingerprinted from the per-file hashes rather than the clock, so two runs
     # over the same Wikidata state produce an identical s_version -- a
     # scheduled refresh must not open a pull request when nothing changed.
-    entries.sort(key=lambda entry: entry['s_country_name'])
-    fingerprint = hashlib.sha256(
-        '\n'.join(e['s_file_name'] + ':' + e['s_sha256'] for e in entries).encode('utf-8')
-    ).hexdigest()[:16]
+    neutral.sort(key=lambda entry: entry['code'])
+    # Over every published file, not just the canonical one. The version is
+    # what publish.py refuses to republish and what a consumer caches on, so
+    # anything that changes a byte anyone can fetch has to move it. Fingerprinting
+    # data/ alone meant compacting the JSON writer -- 500 MB off the release --
+    # left the version identical and the change unpublishable.
+    fingerprint = hashlib.sha256('\n'.join(
+        '%s:%s' % (e['files'][fmt], e['sha256'][fmt])
+        for e in neutral for fmt in ('data', 'json', 'csv')
+    ).encode('utf-8')).hexdigest()[:16]
+
     manifest = {
-        's_version': fingerprint,
-        's_source': 'https://www.wikidata.org/ (Wikidata truthy dump, CC0)',
-        's_license': 'CC0-1.0',
-        'locations': entries,
+        'version': fingerprint,
+        'license': 'CC0-1.0',
+        'source': 'https://www.wikidata.org/ (Wikidata truthy dump, CC0)',
+        'countries': neutral,
     }
     with open(manifest_path, 'w', encoding='utf-8') as out:
-        out.write(json.dumps(manifest, indent=4))
+        out.write(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
 
     summary.sort(key=lambda entry: entry['code'])
     with open(os.path.join(args.out_dir, 'build-stats.json'), 'w', encoding='utf-8') as out:

@@ -8,14 +8,18 @@ one with coordinates.
 
 ```bash
 curl -s https://geo.mindstellar.com/releases/latest.json
-curl -s --compressed https://geo.mindstellar.com/releases/2026-08-13/json/MT-Malta.json
+curl -s --compressed https://geo.mindstellar.com/releases/<version>/manifest.json
+curl -s --compressed https://geo.mindstellar.com/releases/<version>/json/MT.json
 ```
+
+Three formats per country — `data/<CC>.ndjson` to stream, `json/<CC>.json`
+nested, `csv/<CC>.csv` flat — with every file's sha256 in `manifest.json`, so a
+fetch can be verified. Use `--compressed`: the edge compresses on the fly and
+Mexico is 76 MB otherwise.
 
 The data is published to object storage rather than kept in git — see
 `docs/RELEASING.md`. What is in this repository is the pipeline that produces
-it. Every file's sha256 is in the manifest, so a fetch can be verified; use
-`--compressed`, since the edge compresses on the fly and Mexico is 76 MB
-otherwise.
+it.
 
 ## Why
 

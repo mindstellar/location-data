@@ -34,7 +34,7 @@ from contracts import slugify
 # it into place first -- refresh.py created and removed that symlink around
 # every call purely to satisfy this.
 BUILD_DIR = 'src'
-MANIFEST_NAME = 'json-list.json'
+MANIFEST_NAME = 'manifest.json'
 
 
 def manifest_path():
@@ -137,6 +137,18 @@ def load_allowlist(path=ALLOWLIST_PATH):
     return allowed
 
 
+def countries_of(manifest):
+    """code -> settlement count, from either manifest shape.
+
+    The published release carries the neutral manifest; a baseline given as a
+    path may still be an older json-list.json, and a regression gate that
+    cannot read the thing it is comparing against is a gate that skips.
+    """
+    if 'countries' in manifest:
+        return {e['code']: e.get('settlements', 0) for e in manifest['countries']}
+    return {e['s_country_code']: e.get('i_cities', 0) for e in manifest.get('locations', ())}
+
+
 def per_country_regression(new, baseline):
     """Countries whose city count fell below MIN_CITY_RATIO of their count in
     baseline_ref. Returns (blocking, allowlisted) -- two lists of
@@ -148,8 +160,8 @@ def per_country_regression(new, baseline):
         print('no published release to compare against -- skipping the per-country gate')
         return [], []
 
-    old_by_code = {e['s_country_code']: e.get('i_cities', 0) for e in baseline['locations']}
-    new_by_code = {e['s_country_code']: e.get('i_cities', 0) for e in new['locations']}
+    old_by_code = countries_of(baseline)
+    new_by_code = countries_of(new)
     allowlist = load_allowlist()
 
     blocking, allowlisted = [], []
@@ -194,13 +206,14 @@ MAX_MISSING_CAPITALS = 0.05
 def capital_presence(manifest, data_dir=None, json_dir=None):
     """(present, missing) over countries whose canonical record names a capital.
 
-    The capital name comes from the canonical record, which carries the
-    country-level block, but presence is checked against the published
-    per-country file -- that is what a consumer actually receives, and it
-    includes the region-as-city rows synthesised for a region with no
-    settlements of its own. A city-state whose only row is that synthesised
-    city does contain its capital, and measuring the canonical file alone
-    would wrongly call it missing.
+    The capital name comes from the canonical stream, which carries the
+    country-level block; presence is checked against the published per-country
+    JSON, which is what a consumer actually receives.
+
+    This asks whether the capital is really in the data. Nothing is synthesised
+    to make it pass: a country whose capital is missing from the published file
+    is reported, and a city-state whose only settlement is the capital counts
+    because that settlement is real.
 
     Returns (0, []) when there is no canonical output to read.
     """
@@ -208,7 +221,7 @@ def capital_presence(manifest, data_dir=None, json_dir=None):
     json_dir = json_dir if json_dir is not None else os.path.join(BUILD_DIR, 'json')
     if not os.path.isdir(data_dir):
         return 0, []
-    by_code = {e['s_country_code']: e['s_file_name'] for e in manifest['locations']}
+    by_code = {e['code']: os.path.basename(e['files']['json']) for e in manifest['countries']}
     present, missing = 0, []
     for name in sorted(os.listdir(data_dir)):
         if not name.endswith('.ndjson'):
@@ -229,8 +242,8 @@ def capital_presence(manifest, data_dir=None, json_dir=None):
             with open(os.path.join(json_dir, published), encoding='utf-8') as handle:
                 country = json.load(handle)
             for region in country['regions']:
-                for city in region['cities']:
-                    slugs.add(city.get('s_city_slug'))
+                for city in region['settlements']:
+                    slugs.add(city.get('slug'))
         if slugify(capital) in slugs:
             present += 1
         else:
@@ -243,13 +256,13 @@ def coord_coverage():
     with open(manifest_path(), encoding='utf-8') as handle:
         manifest = json.load(handle)
     total = missing = 0
-    for entry in manifest['locations']:
-        with open(os.path.join(BUILD_DIR, 'json', entry['s_file_name']), encoding='utf-8') as handle:
+    for entry in manifest['countries']:
+        with open(os.path.join(BUILD_DIR, entry['files']['json']), encoding='utf-8') as handle:
             country = json.load(handle)
         for region in country['regions']:
-            for city in region['cities']:
+            for row in region['settlements']:
                 total += 1
-                if city.get('d_coord_lat') is None or city.get('d_coord_long') is None:
+                if row.get('latitude') is None or row.get('longitude') is None:
                     missing += 1
     return total, missing
 
@@ -287,8 +300,8 @@ def main():
     if baseline is None:
         print('no baseline to compare against; skipping regression checks')
     else:
-        old_countries = {e['s_country_code'] for e in baseline['locations']}
-        new_countries = {e['s_country_code'] for e in new['locations']}
+        old_countries = set(countries_of(baseline))
+        new_countries = set(countries_of(new))
         dropped = sorted(old_countries - new_countries)
         print('countries: %d -> %d (%d dropped, %d added)'
               % (len(old_countries), len(new_countries), len(dropped),
@@ -299,8 +312,8 @@ def main():
             failures.append('%d of %d countries disappeared'
                             % (len(dropped), len(old_countries)))
 
-        old_cities = sum(e.get('i_cities', 0) for e in baseline['locations'])
-        new_cities = sum(e.get('i_cities', 0) for e in new['locations'])
+        old_cities = sum(countries_of(baseline).values())
+        new_cities = sum(countries_of(new).values())
         if old_cities:
             print('cities in manifest: %d -> %d (%+.1f%%)'
                   % (old_cities, new_cities, 100 * (new_cities - old_cities) / old_cities))
