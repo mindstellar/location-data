@@ -1,0 +1,20 @@
+.vscode
+__pycache__/
+.remember/
+
+# Hours of query results. Kept locally, never committed. A copy lives outside
+# the repository as well, so that `git clean -fdx` cannot destroy it.
+.wikidata_cache/
+
+# Build inputs and outputs: the upstream snapshots are large and
+# re-downloadable, and the generated data is written by the scripts here.
+countries-states-cities.json
+*.nt
+*.nt.gz
+dump-scan/
+dump-build/
+
+# R2 credentials, if anyone is tempted to keep them beside the code.
+.env
+.envrc
+r2-credentials*

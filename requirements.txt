@@ -1,0 +1,9 @@
+requests>=2.31
+
+# Transliteration for the 871,614 settlements whose only labels are non-Latin.
+# Pinned exactly, not floated: their output becomes a name and a slug, so an
+# upgrade rewrites names and changes the manifest fingerprint on every row it
+# touches. Both are permissive (MIT, ISC) and are tools rather than data
+# sources -- transliterating a CC0 label produces a CC0 label.
+pypinyin==0.55.0
+anyascii==0.3.3

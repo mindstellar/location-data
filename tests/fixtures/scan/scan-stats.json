@@ -1,0 +1,16 @@
+{
+  "countries": [
+    "VA",
+    "MC",
+    "NU",
+    "CK",
+    "MT",
+    "AL",
+    "TJ"
+  ],
+  "entities_kept": 36566,
+  "fixture_of": "scan2",
+  "p131_edges": 23950,
+  "p279_edges": 6329,
+  "shards": 23
+}

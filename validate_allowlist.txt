@@ -1,0 +1,33 @@
+# Countries validate.py's per-country city-count gate would otherwise block,
+# with the reason a drop below 70% of the feat/coordinates-and-refresh baseline
+# was investigated and accepted rather than fixed. One line per country:
+#
+#   CODE: reason
+#
+# One line. The parser splits on the first colon and ignores blank and #-lines,
+# so a wrapped entry would be read as a country code called "items)".
+#
+# A country belongs here only after checking whether the loss is a bug in the
+# build (fix it instead) or genuine Wikidata sparsity/graph incompleteness for
+# that country (allowlist it, with the evidence in the reason). Do not add a
+# country here just because it is failing the gate.
+#
+# Read that rule twice before adding anything. Three of the seven entries that
+# used to be here were wrong: they blamed upstream sparsity for what were two
+# defects in this build, and each was written with real evidence attached,
+# which is exactly what made them convincing. "Most of these settlements point
+# straight at the country with no intermediate division" was a true observation
+# and the wrong conclusion -- the fix was to file them under a country-level
+# region, not to accept the loss. Jamaica went 162 -> 198, Vietnam 102 -> 138,
+# Mauritius 93 -> 125, and JM and JE left this file entirely.
+#
+# An allowlist entry is a claim that the data is as good as it can get. It ages
+# badly and nothing re-checks it. Prefer fixing.
+
+VN: Wikidata files Vietnam's subdivision classes -- commune-level town (535 items), district-level town (114), provincial city (91), urban district (54), rural district (47) -- beneath "former subdivisions of Vietnam", which is beneath "former administrative territorial entity". Excluding what upstream itself marks as former is correct, so the shortfall is upstream state rather than a classification bug. Recheck after a dump refresh: if the successor units are populated under new classes the count recovers on its own. Partly recovered already (102 -> 138) now that settlements reaching no division are kept.
+
+PA: 197 settlements exist in Wikidata by P17 and coordinate, of which 183 attach to one of the 14 selected provinces -- a 93% attachment rate, so containment is working. The gap against a 551-city baseline is that Wikidata carries roughly a third of what the ODbL dataset does for Panama.
+
+UY: 852 settlements exist, 846 attach (99%). Confirmed independently against direct SPARQL, which found ~816. The 2,010-city baseline is far ahead of what Wikidata records for Uruguay, and the language fallback recovered nothing further, so this is not a labelling problem either.
+
+CR: 108 settlements exist, 99 attach (92%). The 159-city baseline exceeds what Wikidata holds for Costa Rica.
