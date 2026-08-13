@@ -3,22 +3,34 @@
 A worldwide dataset of countries, administrative divisions and settlements,
 built from Wikidata, plus the scripts that build it.
 
-The dataset is not in this repository yet. What is here is the pipeline that
-produces it, and the licensing reason it exists at all.
+**255 countries, 6,036 administrative divisions, 1,745,358 settlements**, every
+one with coordinates. The data is published to Cloudflare R2 rather than kept
+in git — see `docs/RELEASING.md`. What is in this repository is the pipeline
+that produces it.
 
 ## Why
 
-The obvious source for this data is
-[dr5hn/countries-states-cities-database](https://github.com/dr5hn/countries-states-cities-database),
-and it is a good dataset. It is also **ODbL**, which is share-alike: anything
-that redistributes it owes attribution and must keep the derived database under
-the same licence. That travels with the data forever, through every consumer.
+The dataset is built from [Wikidata](https://www.wikidata.org/), which is
+**CC0**, and it is published CC0. A consumer can take it, modify it, embed it
+in a product and never think about the licence again.
 
-Wikidata is **CC0**. A dataset built from it carries no attribution obligation
-and no share-alike, so a consumer can take it, modify it, embed it in a product
-and never think about the licence again. That is the entire point of this
-repository, and every design decision below defers to it: no source that
-carries an attribution requirement is mixed in, however convenient.
+That is the whole reason the project exists, because the alternative does not
+allow it.
+[dr5hn/countries-states-cities-database](https://github.com/dr5hn/countries-states-cities-database)
+is the dataset most people reach for and it is a good one, but it is **ODbL**,
+which is share-alike: anything redistributing it owes attribution and must keep
+the derived database under the same licence, forever, through every consumer.
+For anything that ships location data inside a product, that is a permanent
+obligation attached to a table of city names.
+
+So it was rejected as a source rather than used as one. **Nothing here is
+derived from it** — not the data, which comes from the Wikidata dump, and not
+the code. Its existence is the motivation, not the provenance.
+
+Every design decision below defers to the same constraint: no source carrying
+an attribution or share-alike requirement is mixed in, however convenient. That
+rules out GeoNames (CC-BY) and anything OpenStreetMap-derived (ODbL), both of
+which would close real gaps documented in `docs/LIMITATIONS.md`.
 
 Where the data has gaps that Wikidata alone cannot fill, the fallbacks are
 chosen for the same reason. Time zones come from the IANA time zone database,
@@ -49,7 +61,7 @@ containment graph. Both are scattered across the whole dump, so classification
 cannot happen until the pass is over.
 
 Budget on a 4-core machine: ~50 minutes to download the dump, ~90 minutes to
-scan, ~4 minutes to build.
+scan, ~5 minutes to build. `tools/refresh.py` runs all of it, resumably.
 
 ### The SPARQL pipeline (superseded)
 
@@ -121,10 +133,17 @@ changing an existing value is a migration for everyone:
 
 The scripts are **GPL-3.0** (`LICENSE`).
 
-The data this pipeline produces is derived from Wikidata and is intended to be
-**CC0-1.0**. It is not published here yet, and no licence file for it should be
-added until the published data is genuinely Wikidata-derived — claiming CC0
-over anything still carrying ODbL provenance would be false.
+The data is **CC0-1.0**, and a licence file stating so ships inside every
+release alongside the files it applies to. The manifest records it too, in
+`s_license`.
+
+The claim is meant literally, so it is worth saying what backs it. The data
+comes from the Wikidata truthy dump, which is CC0. Time zones come from the
+IANA time zone database, which is public domain. Flag emoji and country-code
+TLDs are computed from the ISO 3166-1 code rather than read from any source.
+Names in non-Latin scripts are machine transliterated, which is a mechanical
+transformation of CC0 input and creates no new rights. No other source
+contributes a single field.
 
 ## Before you depend on it
 
