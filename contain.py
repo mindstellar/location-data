@@ -17,6 +17,7 @@ from classify import (
     Q_COUNTRY_CODE_DATASET,
     Q_ISO_STANDARD,
     is_excluded_division,
+    is_not_a_place,
     is_settlement,
 )
 
@@ -148,7 +149,7 @@ def is_country_item(record):
     return bool(record.get('iso_3166_1'))
 
 
-def select_admin1s(iso2, candidates, settlement_classes):
+def select_admin1s(iso2, candidates, settlement_classes, not_a_place=frozenset()):
     """The leaf-most live divisions whose P300 code starts '<ISO2>-'.
 
     A candidate is dropped if another candidate for the same country sits
@@ -168,11 +169,13 @@ def select_admin1s(iso2, candidates, settlement_classes):
             continue
         if is_country_item(record):
             continue
+        if is_not_a_place(record, not_a_place):
+            continue
         selected[qid] = min(codes)
     return selected
 
 
-def select_admin1s_with_dissolved(iso2, candidates):
+def select_admin1s_with_dissolved(iso2, candidates, not_a_place=frozenset()):
     """Tier 3: the same P300 selection as tier 1 with the dissolved and
     end-time exclusions lifted. For a country whose entire admin tier was
     abolished -- Madagascar's provinces, gone since 2009 -- every division is
@@ -187,6 +190,8 @@ def select_admin1s_with_dissolved(iso2, candidates):
             continue
         if is_country_item(record):
             continue
+        if is_not_a_place(record, not_a_place):
+            continue
         for cls in record.get('instance_of', ()):
             if cls in ('Q%d' % Q_ISO_STANDARD, 'Q%d' % Q_COUNTRY_CODE_DATASET):
                 break
@@ -196,7 +201,7 @@ def select_admin1s_with_dissolved(iso2, candidates):
 
 
 def select_admin1s_under_country(country_qid, country_children, records,
-                                 admin_classes):
+                                 admin_classes, not_a_place=frozenset()):
     """Tier 2: administrative territorial entities that are direct P131
     children of the country, selected without reference to P300 at all.
 
@@ -213,6 +218,8 @@ def select_admin1s_under_country(country_qid, country_children, records,
         if record.get('dissolved') or record.get('end_time'):
             continue
         if is_country_item(record):
+            continue
+        if is_not_a_place(record, not_a_place):
             continue
         for cls in record.get('instance_of', ()):
             if cls.startswith('Q') and int(cls[1:]) in admin_classes:

@@ -29,7 +29,7 @@ from dump_build import (  # noqa: E402
     resolve_name,
     subclass_closure,
 )
-from classify import Exclusions  # noqa: E402
+from classify import Exclusions, is_not_a_place  # noqa: E402
 from contain import (  # noqa: E402
     is_country_item,
     select_admin1s,
@@ -572,3 +572,58 @@ class BaselineResolution(unittest.TestCase):
         # Not a git ref. A ref has to be remembered and updated by hand, and
         # when it stops resolving the gate disappears in silence.
         self.assertEqual('r2', BASELINE_DEFAULT)
+
+
+class RegionsMustBePlaces(unittest.TestCase):
+    """Tier 2 selects a country's P131 children by the administrative-entity
+    closure, and Wikidata files a lot of non-geography there. Hong Kong shipped
+    "Accountancy" and "Agriculture and Fisheries" -- functional constituencies
+    -- plus four dioceses and "Hong Kong Time", 39 of its 63 regions."""
+
+    CLASSES = frozenset({5508804, 3146899, 12143})   # constituency, diocese, time zone
+
+    def test_a_constituency_is_not_a_region(self):
+        self.assertTrue(is_not_a_place(entity(instance_of=[5508804]), self.CLASSES))
+
+    def test_an_iso_code_overrides_everything(self):
+        """PH-00 is Metro Manila, the National Capital Region, which Wikidata
+        also calls a metropolitan area. Jarvis Island, Johnston Atoll and
+        Kingman Reef are the US Minor Outlying Islands' actual subdivisions and
+        also wildlife refuges. An official subdivision code settles it."""
+        record = entity(instance_of=[5508804])
+        record['iso_3166_2'] = ['PH-00']
+        self.assertFalse(is_not_a_place(record, self.CLASSES))
+
+    def test_an_ordinary_division_is_untouched(self):
+        self.assertFalse(is_not_a_place(entity(instance_of=[15110]), self.CLASSES))
+
+    def test_the_roots_are_only_the_two_that_close_safely(self):
+        """Closing over "electoral unit" removes 680 regions including every
+        province of Argentina and every French departement; over "religious
+        administrative territorial entity" it takes Macau's civil freguesias;
+        over "metropolitan area" it takes Italy's citta metropolitane. Those
+        are matched exactly instead, and this pins the distinction."""
+        from classify import NOT_A_PLACE_ROOTS, NOT_A_PLACE_CLASSES
+        self.assertEqual((473972, 12143), NOT_A_PLACE_ROOTS)
+        for unsafe in (192611, 20926517, 1907114):
+            self.assertNotIn(unsafe, NOT_A_PLACE_ROOTS)
+        self.assertIn(1907114, NOT_A_PLACE_CLASSES, 'exact, not closed over')
+
+
+class SandboxEntities(unittest.TestCase):
+    """Wikidata's scratch items are editable by anyone and pick up whatever a
+    test needed. Q15397819 shipped as a city in Egypt while claiming to be a
+    municipality of Germany, with P17 the Cook Islands and coordinates in
+    Japan."""
+
+    def test_a_sandbox_item_is_never_a_settlement(self):
+        record = entity(instance_of=[10])
+        record['id'] = 15397819
+        self.assertFalse(is_settlement(record, {10}))
+        self.assertFalse(is_settlement(record, {10}, Exclusions(
+            hard=set(), former=set(), soft=set(), rescue=set())))
+
+    def test_an_ordinary_entity_with_the_same_class_is_kept(self):
+        record = entity(instance_of=[10])
+        record['id'] = 12345
+        self.assertTrue(is_settlement(record, {10}))

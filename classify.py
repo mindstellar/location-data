@@ -137,6 +137,77 @@ ADMIN_RESCUE_ROOT = Q_ADMIN_TERRITORIAL_ENTITY
 #              as its regions.
 CLOSURE_BLOCKED = frozenset({15623456, 97095925})
 
+# Things Wikidata files under "administrative territorial entity" that nobody
+# would choose from a location picker. Tier 2 selects a country's P131 children
+# by that closure, so without this Hong Kong ships "Accountancy" and
+# "Agriculture and Fisheries" -- its functional constituencies -- alongside
+# "Hong Kong Time", French Polynesia ships "Pacific/Gambier", and South Georgia
+# ships a whaling station.
+#
+# Two roots only, because almost nothing here can be closed over safely:
+#
+#   "electoral unit" removes 680 regions including every province of Argentina
+#       and every French departement, which are electoral units as well as
+#       administrative ones.
+#   "religious administrative territorial entity" takes Macau's civil
+#       freguesias -- Cotai, Santo Antonio, Se -- which are real divisions that
+#       happen to be named after the parishes they grew out of.
+#   "metropolitan area" takes Italy's citta metropolitane, which replaced
+#       provinces in fourteen cities.
+#
+# So the rest are matched exactly. A list of verified classes beats a clever
+# closure that also deletes Argentina; each entry below was checked against
+# what it actually removed.
+NOT_A_PLACE_ROOTS = (473972, 12143)          # protected area, time zone
+
+NOT_A_PLACE_CLASSES = frozenset({
+    # elections
+    192611, 15620943, 5508804, 2973947, 17166756, 28657263, 2713747, 20220333,
+    # church jurisdictions -- note this does NOT include the civil parishes of
+    # Macau, Jersey, Bermuda, Montserrat or the Isle of Man
+    3146899, 18917976, 20060955, 105390172, 124098638, 123696317, 1385389,
+    57413580, 7137411, 644930,
+    # statistical and planning areas, not administrative ones
+    1768043, 1907114, 2342385,
+    # education
+    398141, 2822246, 7603678,
+    # and things that are simply not divisions
+    3497366, 34442, 676050, 15243209, 618123, 184358, 718570, 6063204,
+})
+
+
+def not_a_place_classes(p279):
+    """Every class a region must not be, closed where closing is safe."""
+    out = set(NOT_A_PLACE_CLASSES)
+    for root in NOT_A_PLACE_ROOTS:
+        out |= subclass_closure(p279, [root], CLOSURE_BLOCKED)
+    return out
+
+
+def is_not_a_place(record, classes):
+    """Whether this division is something other than a place.
+
+    An ISO 3166-2 code wins over everything here. It is an official statement
+    that the thing is a subdivision, and five would otherwise be dropped: the
+    Philippines' National Capital Region, which Wikidata also calls a
+    metropolitan area, and Jarvis Island, Johnston Atoll and Kingman Reef,
+    which are the US Minor Outlying Islands' actual subdivisions and also
+    wildlife refuges.
+    """
+    if record.get('iso_3166_2'):
+        return False
+    for cls in record.get('instance_of', ()):
+        if cls.startswith('Q') and int(cls[1:]) in classes:
+            return True
+    return False
+
+# Wikidata's own scratch items. Anyone may edit them to anything, so they pick
+# up whatever classes a test needed that day. Q15397819 shipped as a city in
+# Egypt: instance of "municipality of Germany", P17 the Cook Islands, and
+# coordinates in Japan. Excluded by id because there is nothing about their
+# content to key on -- that is the point of them.
+SANDBOX_ENTITIES = frozenset({4115189, 13406268, 15397819})
+
 MAX_PROPAGATION_ROUNDS = 40
 
 
@@ -228,6 +299,8 @@ def is_settlement(record, settlement_classes, exclusions=None):
       * soft -- a granularity hint, lost to positive city or administrative
         evidence
     """
+    if record.get('id') in SANDBOX_ENTITIES:
+        return False
     if not exclusions:
         return any(cls.startswith('Q') and int(cls[1:]) in settlement_classes
                    for cls in record.get('instance_of', ()))

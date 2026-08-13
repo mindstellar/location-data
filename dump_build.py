@@ -40,6 +40,7 @@ import time
 
 from classify import (
     CLOSURE_BLOCKED,
+    not_a_place_classes,
     Q_ADMIN_TERRITORIAL_ENTITY,
     SETTLEMENT_ROOTS,
     exclusion_sets,
@@ -138,6 +139,9 @@ def main():
     settlement_classes = subclass_closure(p279, list(SETTLEMENT_ROOTS))
     print('  %d classes reach a settlement root through P279*' % len(settlement_classes), flush=True)
     exclude_classes = exclusion_sets(p279)
+    not_a_place = not_a_place_classes(p279)
+    print('  %d classes a region must not be (constituencies, dioceses, parks, '
+          'time zones)' % len(not_a_place), flush=True)
     print('  excluded: %d categorical, %d former, %d soft (overridable by %d '
           'city/administrative classes)'
           % (len(exclude_classes.hard), len(exclude_classes.former),
@@ -198,7 +202,8 @@ def main():
     print('selecting admin-1 tiers...', flush=True)
     plans = {}
     for iso2 in wanted:
-        candidates = select_admin1s(iso2, admin1_candidates, settlement_classes)
+        candidates = select_admin1s(iso2, admin1_candidates, settlement_classes,
+                                    not_a_place)
         selected = drop_non_leaf(candidates, admin1_candidates, ancestors_of,
                                  settlement_classes, exclude_classes)
         # The divisions the leaf-most rule dropped are kept as a fallback
@@ -271,14 +276,15 @@ def main():
             if plan.country_qid is None:
                 continue
             tier2 = select_admin1s_under_country(plan.country_qid, country_children,
-                                                 fallback_records, admin_classes)
+                                                 fallback_records, admin_classes,
+                                                 not_a_place)
             if tier2:
                 plan.leaf = tier2
                 plan.tier = 2
                 admin1_candidates.update({q: fallback_records[q] for q in tier2
                                           if q in fallback_records})
                 continue
-            tier3 = select_admin1s_with_dissolved(iso2, admin1_candidates)
+            tier3 = select_admin1s_with_dissolved(iso2, admin1_candidates, not_a_place)
             tier3 = drop_non_leaf(tier3, admin1_candidates, ancestors_of, settlement_classes, exclude_classes)
             if tier3:
                 plan.leaf = tier3
@@ -310,9 +316,19 @@ def main():
     # if something actually lands in it.
     for iso2 in wanted:
         plan = plans[iso2]
-        if plan.mode != 'admin1' or plan.country_qid is None:
+        if plan.country_qid is None:
             continue
-        plan.add_country_as_coarse(country_records, admin1_candidates)
+        if plan.mode == 'admin1':
+            plan.add_country_as_coarse(country_records, admin1_candidates)
+        # Seeded for country-mode countries too. Those take their settlements
+        # from P17, which is the one signal here that cannot be trusted -- a
+        # dependent territory's places name the parent state. Without a seed,
+        # containment leads nowhere for them and P17 is all that is left: 24
+        # Falkland settlements point P131 straight at the Falklands and carry
+        # P17 = United Kingdom, so when the Falklands lost its only two
+        # "divisions" -- an electoral unit and a church parish -- Britain took
+        # them. With a seed, containment answers first and P17 only catches
+        # what has no containment at all.
         seeds.setdefault(plan.country_qid, plan.country_qid + 3 * DEPTH_SCALE)
 
     tiers = {}
@@ -342,6 +358,27 @@ def main():
                 admin1_country[qid] = iso2
             for qid in plan.coarse:
                 admin1_country.setdefault(qid, iso2)
+        elif plan.country_qid is not None:
+            # A country-mode country takes its settlements from P17, which is
+            # the one thing here that cannot be trusted: a dependent
+            # territory's places name the parent state. 24 Falkland
+            # settlements have P17 = United Kingdom and containment pointing
+            # straight at the Falklands, and when the Falklands lost its only
+            # divisions -- they were an electoral unit and a church parish --
+            # tier 4 handed them to Britain. Containment is the authority for
+            # these too; P17 stays as the additional catch for settlements
+            # that have no containment at all.
+            admin1_country.setdefault(plan.country_qid, iso2)
+    # The regions that stand for a whole country rather than a division of one.
+    # These are seeded three hops out, so two of them are always the same
+    # distance from a settlement that reaches neither country's divisions, and
+    # the tie breaks on the lower QID. That let the United Kingdom's take 24
+    # Falkland settlements the moment their own region was removed: Q145 is
+    # simply a smaller number than Q9854. A country-level region must not
+    # capture a settlement that another country claims.
+    country_level = {plans[iso2].country_qid: iso2 for iso2 in wanted
+                     if plans[iso2].mode == 'admin1' and plans[iso2].country_qid is not None}
+
     tier4_country = {}
     for iso2 in wanted:
         if plans[iso2].mode == 'country':
@@ -383,7 +420,8 @@ def main():
                 record = json.loads(line)
                 if not is_settlement(record, settlement_classes, exclude_classes):
                     continue
-                iso2 = admin1_country.get(assign.get(record['id']))
+                assigned = assign.get(record['id'])
+                iso2 = admin1_country.get(assigned)
                 home = record.get('country')
                 home_qid = int(home[1:]) if home and home.startswith('Q') else None
                 if iso2 is None and home_qid is not None:

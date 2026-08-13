@@ -92,7 +92,11 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
                     # dropping it. Same reasoning as the coarse fallback below,
                     # one step further out: a place that is findable under its
                     # country beats a place that is not in the dataset.
-                    if admin1_qid is None and country_qid in coarse:
+                    if (admin1_qid not in by_region and admin1_qid not in coarse
+                            and country_qid in coarse):
+                        # Either nothing contains it, or what does belongs to
+                        # another country. Its own country-level region is the
+                        # better answer than dropping it.
                         admin1_qid = country_qid
                     if admin1_qid is not None and admin1_qid in coarse and admin1_qid not in by_region:
                         by_region[admin1_qid] = []
