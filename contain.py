@@ -228,15 +228,30 @@ def select_admin1s_under_country(country_qid, country_children, records,
     return selected
 
 
-def drop_non_leaf(selected, candidates, p131_parents_of, settlement_classes, exclude_classes=None):
-    """Remove any selected division that contains another selected division
-    which is not itself a settlement."""
-    has_sub_area = set()
-    for qid in selected:
-        record = candidates.get(qid)
-        if record is None or is_settlement(record, settlement_classes, exclude_classes):
-            continue
-        for ancestor in p131_parents_of(qid):
-            if ancestor in selected and ancestor != qid:
-                has_sub_area.add(ancestor)
-    return {q: c for q, c in selected.items() if q not in has_sub_area}
+def keep_root_most(selected, p131_parents_of):
+    """Keep only divisions with no other selected division above them.
+
+    ISO 3166-2 is a flat list per country, but for about a fifth of countries
+    it describes two levels at once: France has regions and departements,
+    Spain autonomous communities and provinces, Czechia kraje and okresy. A
+    division whose ISO-coded ancestor is also in the list is the lower of the
+    two, so dropping it leaves exactly the first level.
+
+    This is the "no ISO-coded parent" rule, and it is the only definition of
+    level 1 that is consistent across countries. Natural Earth, which is a
+    reasonable cross-check, is not: it picks departements for France and
+    autonomous communities for Spain, which is per-country judgement rather
+    than a rule.
+
+    Measured against ISO: India 36, Spain 19, Italy 20, Czechia 14, Bangladesh
+    8, Germany 16, United States 51, France 13, and Britain resolves to
+    England, Scotland, Wales and Northern Ireland. France is 13 rather than 18
+    because its five overseas regions ship as their own countries, and the
+    regions abolished in 2016 carry dissolution dates and were already gone.
+
+    The rule this replaced kept the leaf-most instead, which gave 109 regions
+    for Czechia and 74 for Bangladesh -- their districts, not their regions or
+    divisions.
+    """
+    return {q: c for q, c in selected.items()
+            if not (set(p131_parents_of(q)) - {q}) & set(selected)}

@@ -12,10 +12,10 @@
     "AD": {
       "cities": 71,
       "name": "Andorra",
-      "regions": 9,
-      "sha256_csv": "65de90eea37b299299bc262dd3141f4f21aa62c6fe55d02885ed6a4ded6e1a6f",
-      "sha256_data": "a96f25a555e3df89b6c850c635bc0b3a24a1b6583f91c677c6b8a10778761bf9",
-      "sha256_json": "3ac87911d3f35cd7416f58225687f35b67dcd72fbeb6109a003cc7331800df6f"
+      "regions": 8,
+      "sha256_csv": "2e2dd323b33a7c38104e409844df3101f9cfd2d052d95243895571c5a97ffa88",
+      "sha256_data": "52f20d2123f4dcd831d5001df418096584944c9e8ba1c20d25bf023c822bd705",
+      "sha256_json": "1be8641963bb351fb9fbbaa302b9181bcbae154182ea049a4a3e11c24a7fd0ce"
     },
     "AE": {
       "cities": 414,
@@ -52,10 +52,10 @@
     "AL": {
       "cities": 3440,
       "name": "Albania",
-      "regions": 38,
-      "sha256_csv": "91c6f79dbc63ba0b9eab9f181f7cdbb3f2df0c23bd42ca3cfa80dcc3aa7daacb",
-      "sha256_data": "acaa68db39d4a333a817cae5bb1e6eda69b132d6f4e9fc4378ac6cd3de56d36f",
-      "sha256_json": "82bf02f258af112e507e9796e9e408a7d6df6f412c9d7ec45f014caf7c3bde57"
+      "regions": 13,
+      "sha256_csv": "8e42564e31ca9ff8cde785655bb6a35d318fd8d2ba29baab713c05be6c2b52b5",
+      "sha256_data": "57102db9ee8b801ef63dae9b330b1592b27e8596b42fd5bbd899ea26d60437e1",
+      "sha256_json": "1ad12990cc6b8fb61c79c7513bd6af4154f852ea326aaf328e15b71efeff5763"
     },
     "AM": {
       "cities": 1213,
@@ -84,10 +84,10 @@
     "AR": {
       "cities": 14971,
       "name": "Argentina",
-      "regions": 26,
+      "regions": 25,
       "sha256_csv": "a946ec9475b919c2606fca4221047065fb6c52ef5d2fb53ed5a8caef3ac95a8c",
-      "sha256_data": "c5d7bd2fcbb065716751216c9f19d3e70f57da8654c5cfc558cd0b1f5f1f64f6",
-      "sha256_json": "e0383873a82924f08baea20ff71df150e08abaebc5f965e9931a90294f2c7945"
+      "sha256_data": "00c4e967479d929ab3d81e581ce19f81cc53bbb6105326a24b8c842fe80c2f17",
+      "sha256_json": "a7e23ad176f068a838a1393bc6f7670c3d6e31d8bfbe75ed10a551bdf1d7575f"
     },
     "AS": {
       "cities": 66,
@@ -132,18 +132,18 @@
     "AZ": {
       "cities": 5423,
       "name": "Azerbaijan",
-      "regions": 80,
-      "sha256_csv": "2343b98ecc91eaa2a77593fd1134bd6fb0d2a55bf81256727375ee17f52a6a4d",
-      "sha256_data": "735f615ecd43f23631fc8f6402bcd416a83b22e70fe239d756b4c018ecd9c135",
-      "sha256_json": "60b80b690e7b8bfe09813b7f1ef6ffa46cc1364e910b859354fbff212aaca031"
+      "regions": 68,
+      "sha256_csv": "571f4a600dbe9c90562445913129da9b14c4b578b96be6fb87dd4adcb63dd556",
+      "sha256_data": "81deb2369fc86d351e09c422870d587c0788909f2fc1bbb44bf6e457a4501ce3",
+      "sha256_json": "b12a1a5b5a549973000f738db4896f02e58986b827856ce99bce4a17b752a409"
     },
     "BA": {
       "cities": 6396,
       "name": "Bosnia and Herzegovina",
-      "regions": 14,
-      "sha256_csv": "3dacdfe585d54ae188ed9dc4f094ef8daa27e1666465ab6d5fe15e7e4d367944",
-      "sha256_data": "1af2902b95e5e4b881b3950a57e5a31233999fc509420aff3f31ff563bb6d74d",
-      "sha256_json": "26952bcde0680465b2007fb1b45824c7ce60e2dcd93a82811013cd79c4903e00"
+      "regions": 3,
+      "sha256_csv": "c3feed160e5b6662e777c14fb39f5aeddfe1936fd3a54192cbb8b2c1843ae376",
+      "sha256_data": "d2798ad6efff30270e2594e21345ddd669d062e6335add1c65652b03d259b9df",
+      "sha256_json": "14631af3b0fdee9c9d29b86fa978b2bcee20da2ce0f716ced8a67b089623e36c"
     },
     "BB": {
       "cities": 90,
@@ -156,26 +156,26 @@
     "BD": {
       "cities": 1980,
       "name": "Bangladesh",
-      "regions": 74,
-      "sha256_csv": "2a532d2d756e8aca21cbc06108b639d16ccb00e8a600f893c4b70ce66ddd3452",
-      "sha256_data": "3dd20b75b1afaf7724aac4eaa2dceb7d76715cb300a734267eff4e5db4a212ae",
-      "sha256_json": "b6b160555351bbbdef01f9a3cc9bd1be4fe39655af7ac4f14e0c077e33071444"
+      "regions": 9,
+      "sha256_csv": "28a16c8913a6b3edb00b377133172ba5edc3b70a798b2fa49c85fd1de0c665a1",
+      "sha256_data": "0ba9feb39820c576d92dd7540efcabde67387140e5d7684c89510eb6db2296d3",
+      "sha256_json": "260be8403bdd5e1f595d9ec7e85ba9bd2d4909da65fc2687349feb1a8fdddf69"
     },
     "BE": {
-      "cities": 6018,
+      "cities": 6017,
       "name": "Belgium",
-      "regions": 14,
-      "sha256_csv": "363cc0f5058d76224912340d26c7f5565239f1aee3403953db61c1117e2400b5",
-      "sha256_data": "11c6a1c82f14d14d0e1a9beaf612c49572b11bc6066b0fb43cfc67ee78cc0423",
-      "sha256_json": "9ad699e6faed5a129c45bccc0b9b4adbb685ef019ea4835ff5e28678f4b0f1db"
+      "regions": 4,
+      "sha256_csv": "dc2b44a79cc9caf725f055a15abb6e9224d771e62f8b57481a82b43a3c52b215",
+      "sha256_data": "10828baa80067fbe51e99b869459cf88ba634dad5e34b4f0d592f99ec0242abc",
+      "sha256_json": "365ee201e79a9838b3f119cf0ab40c3880301932f621fe5c6f5059b47867ce1b"
     },
     "BF": {
-      "cities": 4339,
+      "cities": 4338,
       "name": "Burkina Faso",
-      "regions": 48,
-      "sha256_csv": "c738c62dc617805c0bf50c56f817f435b49335af8ba17b73e3903fe628ed6bdf",
-      "sha256_data": "cd1e0a0530059f20c67061f7643c209f0345ad6d47d49fd81a0bdcbad5343b69",
-      "sha256_json": "93982a5ab56820d88abf7b9f4a28f180af69413897ca9aba4dc7db4a22238d77"
+      "regions": 14,
+      "sha256_csv": "87862b4bff4153f47c3145ad0cf6abd662864bb63634ae03a47e830d8bfd2362",
+      "sha256_data": "293d3e451597b03076ff394741a2df2587af6299b144f012ea58a369df5a20d5",
+      "sha256_json": "68faea0e8b5b2f3a4180613cf3f675dfc6f99dd430988bdf5eebfe5b6ae64bbd"
     },
     "BG": {
       "cities": 5813,
@@ -260,10 +260,10 @@
     "BS": {
       "cities": 102,
       "name": "Bahamas",
-      "regions": 45,
-      "sha256_csv": "c0ee9898ceb9e8cac97d90b3cb1c01ede1a692311e36c0af5bcee0848e1aa31d",
-      "sha256_data": "4b28a19a128adb809c689ab8a3a67acefcacedc28b3da96d8e14b8eb24ecadf2",
-      "sha256_json": "ed43bf72d9224a3b2936b54512be94822fbe098b681a09197483939c21c886ee"
+      "regions": 40,
+      "sha256_csv": "dfff102ef8b2deefd202d11d505dccc426163465032dfc213ccadcac42c2b17b",
+      "sha256_data": "3850ae740d03b027cb29e19ad5ace9e7454b1a19eb974a2ef3773df11bc61c16",
+      "sha256_json": "5dcd6127a8ba407ff766abfa10c4391e00805e5f0a9f65bbc3a63013c52e6e40"
     },
     "BT": {
       "cities": 187,
@@ -284,10 +284,10 @@
     "BW": {
       "cities": 575,
       "name": "Botswana",
-      "regions": 17,
-      "sha256_csv": "ed33a693a39ebb07f10aaa90eaf8c73e2008e48555b99dd36fd184e2df717eb3",
-      "sha256_data": "1f0cb746004f6b56471fbbc386f9bc837462f074711c7366533df19ab12bfb1b",
-      "sha256_json": "4abc803ef22d78a560d723435330c84db7b719f9df8d6660640faa9b88afb4a7"
+      "regions": 11,
+      "sha256_csv": "d9a41e6a94d780de391a8ca32459ddcc1ed957ec2b552f9003e5b79d2a801dd6",
+      "sha256_data": "1f6f54064cebac8e78027621a8202c9ef214b9fa64fc89f7942949ebeb2b1994",
+      "sha256_json": "67d8b462848836751cb537cb0f49c800f127823cfdf8e538d1c63278db5011ab"
     },
     "BY": {
       "cities": 23886,
@@ -346,20 +346,20 @@
       "sha256_json": "ec4a5924796452a2b3503836700657df1c25bd4c90c48f2fc3da037f8db3a402"
     },
     "CH": {
-      "cities": 4605,
+      "cities": 4607,
       "name": "Switzerland",
-      "regions": 28,
-      "sha256_csv": "7bf3db16cb40fdaa3e75d081bd4e1c94dd2e93a59a1d0ceae1aa2483323c2d2d",
-      "sha256_data": "30532270223b176dfc9e6fce4762b6a597af7ffe46365617a874f6e1c61e4bb7",
-      "sha256_json": "d4f0978f3f4f3a93ae86f03fea7cba9284db929e74ee18229a767822a8626852"
+      "regions": 27,
+      "sha256_csv": "ddea27e5306e5b739e3e29baa3b9d556f462873f5ddf4a37e127b1e51afdc492",
+      "sha256_data": "df56e62c21a44484261db521ac349181b6d706f1016e35b9b84f734e689fa595",
+      "sha256_json": "366818619ab5e7db5081b6d0763a1f8ad800064ae49aeb12198cfb6d1c96b054"
     },
     "CI": {
       "cities": 1459,
       "name": "Ivory Coast",
-      "regions": 19,
-      "sha256_csv": "209d570e3c19cea208ce828f108bd27c72e893d885101eb4b0f8420c946e7c02",
-      "sha256_data": "1feac5782fdc39e7ed8ce8ce4e88aaa100652a6f8f80f8a26bae34a8ef118c33",
-      "sha256_json": "9ef8a740e7577598234bc7e093beb8cf2831091b4fb618772f81431bb85a65b8"
+      "regions": 14,
+      "sha256_csv": "bd12a927c1cfa824b66fa605a1df918ee19eb8ffdb2b8b30ff607842325ff075",
+      "sha256_data": "56db2d7d35917c8534dac2814b7a085b364157399eb5551bf9af9309d71ec459",
+      "sha256_json": "4f44d5532ca8bd1b7e9111ecf1fe1dd3e51c7b7347b7338f67075742f4366f54"
     },
     "CK": {
       "cities": 24,
@@ -396,10 +396,10 @@
     "CO": {
       "cities": 2633,
       "name": "Colombia",
-      "regions": 34,
-      "sha256_csv": "970122032f593c7cac4ae6e2bb36bbe5e4d3a5c34f9aba276f4918cc9a3c8ff0",
-      "sha256_data": "05ff519a584956569c34e75d551ed5c7119b62211dd35e704aa20b9cb86edfcf",
-      "sha256_json": "aaffe0803b7d07a57478dc1859e6e8adddc0d85966b08ea43f251393b73c336f"
+      "regions": 33,
+      "sha256_csv": "9f64474648c2fc9a278b87b36d7e1ce12850eafb1f55a5d7fe91d3e0b0d34790",
+      "sha256_data": "ce883fd81aa4c6af7b4ea72bb7321b09c719d70c6149c6a5a9ab4d841333d2b9",
+      "sha256_json": "7d35aef36cdb89e13033e11fca5cf0ed514e96ed9c94935fb8f57fb38cba697e"
     },
     "CP": {
       "cities": 0,
@@ -426,20 +426,20 @@
       "sha256_json": "3390bf86cc666e812db7ba0569f04e52f3f545150c9f7a03e488c1f6329842fa"
     },
     "CU": {
-      "cities": 625,
+      "cities": 624,
       "name": "Cuba",
       "regions": 17,
-      "sha256_csv": "cc2993559ca69c4c434b17a919a4bee650f6a9b07e5a20b02b5b2908854c9542",
-      "sha256_data": "6ebff2a9f2573a7966e211cbfeb4b0f95a801f0e6df01f3cd83561fa60c5f90a",
-      "sha256_json": "a4a0fb6a11e40c1428a30a720564b0ac0ed6d17977038389255902523d4f010a"
+      "sha256_csv": "64712306818d990215ff3bec387526e02bc057c3150aee39e6643b8c869d602c",
+      "sha256_data": "556c58d2ebe40796c914b9e8916d24bb278b9f15f61d7a346f3a3476a85c5937",
+      "sha256_json": "dc1c209afe1e485da14053f9e76791b657c68eae6d3001f629f6c0b1f3c27b4f"
     },
     "CV": {
       "cities": 336,
       "name": "Cape Verde",
-      "regions": 25,
-      "sha256_csv": "2c20bdcf582c20f7876d94bb9d1ae75bfd556b5fae77e11dc06ba9645dd9e8f9",
-      "sha256_data": "9b010a424d3f6c40516ab5f1622188c874d5ad8df4eb400dc01e7dcef57deedb",
-      "sha256_json": "0786451f54e36c18ab4b296eee7dda697bb163bad2952da79b84c9097cecded4"
+      "regions": 3,
+      "sha256_csv": "de0fc3195c180c1f221661407b6a0c60db1ad9ffbdaa24e440cdb8635a9a888c",
+      "sha256_data": "525a0718180e72c75012f013053c6b82b420b36782cff8cf74c79c09f569011e",
+      "sha256_json": "aa7270fce9d131ce4515cde7afeda9068243adb56aa250e8714f73e731b8f87c"
     },
     "CW": {
       "cities": 33,
@@ -466,20 +466,20 @@
       "sha256_json": "edfb6931d487e242e7fbc33ea6054957250974f508ad8f145be4c6de7c0a3aa6"
     },
     "CZ": {
-      "cities": 20032,
+      "cities": 20031,
       "name": "Czech Republic",
-      "regions": 109,
-      "sha256_csv": "df517f0afbd3cfa4f96f8bea38718efdb6558b84827b18b0e265e715e6b11ae0",
-      "sha256_data": "5452b814d617c6e166c8574a44bc119fc452a8d98b3cfabf14a214752569390d",
-      "sha256_json": "d465bff2208fed052ac3f16d8fef9dffe7b52dcbb09f4b0f1d8ab608b77514d1"
+      "regions": 15,
+      "sha256_csv": "a28a50dfe1e727feec549b2de44eccabc05dcbf690b24b03e14a56d59b97da29",
+      "sha256_data": "0c9e279a69d2c466fe3d690e1ca9ae269fd2fe339fbe22cb0b6bf37b9b455853",
+      "sha256_json": "ea2d1cbf5172b3c4155001093aeb8fcda3a3a10b9228dcad90f7ace3346f0c7d"
     },
     "DE": {
-      "cities": 123722,
+      "cities": 123725,
       "name": "Germany",
       "regions": 17,
-      "sha256_csv": "19c1c2de674f639d8ce313117549d761c834a02d23135fcdcce3b04481eae780",
-      "sha256_data": "cf10e7050e20858f824d289e20a862b891bda737dcb73928c487d0b8d16ba8fc",
-      "sha256_json": "d01242e31149e23a421808b7ad678f4096762da6d61edde7598dcfd0484c979e"
+      "sha256_csv": "6b4fe30331755eadbebb6f74a81fe3cfbe56452cbc6ac7dda496b982cbad82ae",
+      "sha256_data": "039c30b99483777fd31226727609e2710770c4cd9db5b846c9a9ce818cf159e2",
+      "sha256_json": "34fdcc60aed40d9d8ddde36d36cc4215d2e8d745e446d03121e22f0d867d8964"
     },
     "DG": {
       "cities": 0,
@@ -540,10 +540,10 @@
     "EE": {
       "cities": 4804,
       "name": "Estonia",
-      "regions": 41,
-      "sha256_csv": "7a05adde1a64f50e780e509f0a2b8853de7272116363da4492c695f57f6ea1a5",
-      "sha256_data": "048ad9afd94b14c196d2cbbeae1bbd6cc0cae3423d2a991590897464d29d29d4",
-      "sha256_json": "3d3f1c844e101bca96733af484919889fae855fbd6b1aa3df625173a4f7f460d"
+      "regions": 16,
+      "sha256_csv": "39483caa42823adcf4656fd404b6cd7f57dc5dff2837a9076f5f9f738d8c2a3d",
+      "sha256_data": "15d31be7e0153d9f97b7b41b70caeddfefee740df1d46b48132c6be859606785",
+      "sha256_json": "e6479b2e61ab0f09c731da2974ac26c61ab3a3433c047817d0bc20082bb18c9e"
     },
     "EG": {
       "cities": 1061,
@@ -572,10 +572,10 @@
     "ES": {
       "cities": 76459,
       "name": "Spain",
-      "regions": 68,
-      "sha256_csv": "e1e1f401309d62d5eb9fad8ed20dc270e29bb7374f5c8912f812d78ac7db0628",
-      "sha256_data": "6750089269bb140d2cb9d29d6259a9f4498cb943988fd673c0f4fa6d1ee26f41",
-      "sha256_json": "6ff589d26f35fa96f5aeb19ec093182865fc3d91103ac2289a9968816f365e8e"
+      "regions": 20,
+      "sha256_csv": "091ad7a58056841952201e831eac450c2fc9456f460fd6b7a845bced34b8ac85",
+      "sha256_data": "dacc7612dc6e13f351366366918748fa9d4918456a8079f2de5525cc057add46",
+      "sha256_json": "a0c218df648b65cfe8b096de680614959e2c9fd104d187586c2af510a768e5ea"
     },
     "ET": {
       "cities": 503,
@@ -596,10 +596,10 @@
     "FJ": {
       "cities": 51,
       "name": "Fiji",
-      "regions": 17,
-      "sha256_csv": "c5117f121a6ee034869c160ec155fbc7ee16df76a29c2193c210eaecdaae35ee",
-      "sha256_data": "be5f7e5829e5376da401bd4d5e8e8e2c9fbd4034dbd91d7d6b2c0b049e8036f9",
-      "sha256_json": "fed5614435c2007fc1d0ced8665332e86a4137643245b1f487307c16b484d4e3"
+      "regions": 6,
+      "sha256_csv": "5e448f3ff758005b01abb3193fd3a66e2e31e7e2d40f7d98267c140966752f8c",
+      "sha256_data": "76c6fc3d4861cd69796974c3179f4e98a084a867f7ddf0ab0ffa76c4b8830503",
+      "sha256_json": "b653493eeaf712ca7a598390979f28ce414236699b9e7238edf113f4084cb330"
     },
     "FK": {
       "cities": 29,
@@ -626,12 +626,12 @@
       "sha256_json": "a53807e95706b481c2fa4b1adffa778a735cbfa63b475f6218f289485cfc89a7"
     },
     "FR": {
-      "cities": 45651,
+      "cities": 45646,
       "name": "France",
-      "regions": 106,
-      "sha256_csv": "27b0b61d0add20b047d11dd2e6ff03b010660e7bb331b1821a7bec3c00b5c119",
-      "sha256_data": "09a4a3434eeccac73d2e4dc7e978e5413a68675f2b9c357f6d16069612ab5572",
-      "sha256_json": "b582fef6e938b7a46cf864ac1c82f9311c829cce8f85769f38b17eb4c052f527"
+      "regions": 14,
+      "sha256_csv": "84780f0fa9b650c4d16d34d0868ea133db9b090d0188b82106b1e500f0610c74",
+      "sha256_data": "048478221ed0ca28db9c5941b95266dbd18f3d6fab8373c3c6bb5d615191fe1b",
+      "sha256_json": "8d8f04df1e0b4ab9eab09c376a420d529dd84ab29ef8cc75d2320860e1715cd2"
     },
     "GA": {
       "cities": 109,
@@ -644,10 +644,10 @@
     "GB": {
       "cities": 37064,
       "name": "United Kingdom",
-      "regions": 259,
-      "sha256_csv": "ef4a0d54a8fc5de786b3493f5dce9241cfe22b0abd6b041cb575ac858e739b02",
-      "sha256_data": "c219817703cb59f1578b0cc19f361b68fbe9be26a7a7fed366c8e385f9865b63",
-      "sha256_json": "4709440cb1418b69d0f9e638e6c510e27a30832e7c6675bcc77fd9f3f90bf2c8"
+      "regions": 7,
+      "sha256_csv": "577b1b48bc39d34d8fe4f0f01d960598ed777ac7d67a4319d774f46f3797936b",
+      "sha256_data": "6c5573ee577725ee289e88957606da1659cd4f2280de7d10ea9a254eac7c1a00",
+      "sha256_json": "0e989fabfd2af94795aa5cad68fb1962868a4fb5b03ffc125b1fc4b9c89d2445"
     },
     "GD": {
       "cities": 125,
@@ -660,10 +660,10 @@
     "GE": {
       "cities": 4519,
       "name": "Georgia",
-      "regions": 18,
-      "sha256_csv": "e5c7cacad8ebcfd103a728249b3fa3bfbde39c4f837d1c4ec37eae513dd65bca",
-      "sha256_data": "fafd0c5aa12dc78fef71181601d2acd0a6e2a60b28453748be46fc22a27db1a8",
-      "sha256_json": "077985d63b049c289e3b1f4bf688c4f1441018ced3cc671196d485c45f9462d4"
+      "regions": 13,
+      "sha256_csv": "be919fb96710c24500440bca325955808f109f29cfb013092e2c2b87f3cc3e40",
+      "sha256_data": "dcc2a2bc3fcc16dbdc5c691f6c33f0cfd8688e7664bb101daa24b1a7c55ab88a",
+      "sha256_json": "048e5557579dbc73d13d8743f08045d5a723d21247458dacda6168bf792aaf93"
     },
     "GF": {
       "cities": 71,
@@ -716,10 +716,10 @@
     "GN": {
       "cities": 297,
       "name": "Guinea",
-      "regions": 42,
-      "sha256_csv": "34c39ff4f6c83d73d1614d7641c0711623f06ceff127b6d918eac57c9093836f",
-      "sha256_data": "3580c2b9c88e75b1fe5c9b46453b0d99c8b43651c20cfc7b7b31c8d08d37e9f1",
-      "sha256_json": "498062ad2b7087cf33d558b05217d9de03e6089149fe0047757656258b7bbaf2"
+      "regions": 9,
+      "sha256_csv": "6e3b0f27fe55d3b07728fdf59c1b06a30476d117bd0fe2246c2c04ff08765a46",
+      "sha256_data": "4e5d92554da5796815d8bd6bd45057eca1a5c8953157fdcea9792f435d849850",
+      "sha256_json": "7e4250fb882f3abdd5ef41d5c38cf7fd94ddfeef4963543d7ad72e8306c182a7"
     },
     "GP": {
       "cities": 102,
@@ -732,18 +732,18 @@
     "GQ": {
       "cities": 141,
       "name": "Equatorial Guinea",
-      "regions": 9,
-      "sha256_csv": "d134e4adb8b54856b8f65e57549041ba5caff95b2b18783d401aa3616171f5dd",
-      "sha256_data": "cfeafdd05bfd18494881d7774ac3631b813a5c596dfb3453bc106fc274a9bc89",
-      "sha256_json": "1d2123ede8c5aa775ce0e4d4028a33af31c44b3db821118d71fdbddfad5b0598"
+      "regions": 3,
+      "sha256_csv": "346c3c47818bc4b07556c6bf1b90e55c91df97659049abcfa49e7e5b82110248",
+      "sha256_data": "701cb9173afe613703aa03517d072d31d6be550d2a0f0b3f66cb690d72d6d569",
+      "sha256_json": "8e53753dfac137b9f1623f944ddd7ffbadc9ec230453e2342a4a545c568a4a51"
     },
     "GR": {
       "cities": 13692,
       "name": "Greece",
-      "regions": 62,
-      "sha256_csv": "d9f7a821206763b4a9622ea681771eb90ee1e9825cc826f3d332fbcd8a05809d",
-      "sha256_data": "699d08a564a9acea3b98ce813aa19c4cefb9a0ce673148318f0eb8a3beecfead",
-      "sha256_json": "d0d8def800de66555c0ee4f5b41aec76c6a270e1bad8b15f8f398602e812f2f1"
+      "regions": 19,
+      "sha256_csv": "8bf9568144cb8ff4bde490c95f93a99951666d3c12d01a513c9cb76c2355c1b8",
+      "sha256_data": "02001c94cab7683316bfc7c7b523a5066285ef692faae1ecaf4f07e07cdf4ad7",
+      "sha256_json": "c1348cd5a4c9e2fa98329b9a9e263cd075a1a86f382c3546811e36a41d74d1c3"
     },
     "GS": {
       "cities": 5,
@@ -772,18 +772,18 @@
     "GW": {
       "cities": 66,
       "name": "Guinea-Bissau",
-      "regions": 10,
-      "sha256_csv": "e4c91e04d7d01c310b3ace87517f27343a096f482076f9dd36faa3c5dc6fc6fe",
-      "sha256_data": "78eadaa01bdae7dcdcf188194fbf439af2ece52b56efc0cbb7edd1557020f2a1",
-      "sha256_json": "51ccc202982d2a94f2d068a1e3bee6a4b5556b0559dcef17ddd8067f524d4253"
+      "regions": 6,
+      "sha256_csv": "382322fe9448158bc4f2c05fa203be3604957241d3d574be5b686d2edc244df5",
+      "sha256_data": "79395b3a871fa7afb0f0ae9cba6cd45aca7428f08de3c5a7261e1dcdab625fe1",
+      "sha256_json": "37412af3639c8ebf9bf4fc8a9488da5da67f10d3cf4ab58c386c65318a09509b"
     },
     "GY": {
       "cities": 144,
       "name": "Guyana",
-      "regions": 11,
-      "sha256_csv": "1530fe54a563cc7016fadd55af32a133594e9bec0d0d8956e2c377f9db9482cb",
-      "sha256_data": "818171197f1e3afb415f05588d40d97df1ca5b3107ea5ce0b58c2ce504e0fbec",
-      "sha256_json": "c8f6f0670f1249130a8761f7b817cbba0582122a3f63ede92f0679f7dd176c21"
+      "regions": 6,
+      "sha256_csv": "ee7b55f85aa9b75dc1649e222aae2c3b18987f5803a42472d71957492b4d2a5d",
+      "sha256_data": "f7f7c8b87c2cde8887e3786a1cbf6f665c927d77dc118e4b56b8a02f5c447dd2",
+      "sha256_json": "c9c273cadb4bdf6ddd7eac9af15eb5f1df7f696c9cf9785bb45cd658fef70886"
     },
     "HK": {
       "cities": 680,
@@ -828,26 +828,26 @@
     "HU": {
       "cities": 3843,
       "name": "Hungary",
-      "regions": 44,
-      "sha256_csv": "7d48e787cf15022f7f4b9413f84c4723eb33018ef85d8694c34e8635c1f0e8a3",
-      "sha256_data": "7196dcc57ca354769cd9452e1c62f46108737a79db9818bdb71b18e885090485",
-      "sha256_json": "a01dffcefbf3e40ef241f56de1eb2991cf8a00c68af05633f366844b494f08d9"
+      "regions": 21,
+      "sha256_csv": "a463b0c3c54862c1b5ccf6e4490c52f6c84ddcf3f0abcad6a29c9a1034ee4774",
+      "sha256_data": "84a7a8c0fe5e2dcec3c217360e286aa14463524d763c62851c46577eba512c1d",
+      "sha256_json": "ea0d2e86e1906abc124d623c958388ad0e7f6da8f70568e8d3718218a220c1a6"
     },
     "ID": {
       "cities": 82507,
       "name": "Indonesia",
-      "regions": 47,
-      "sha256_csv": "044785b2c5b3cafe4a99e69915f3fd36856abf0e895cbe8eec6800754e9c62f0",
-      "sha256_data": "cd13b51de83153193c4eb490cb4a9967d9e9f29fd4d69d19a6fd3dcbc27b8280",
-      "sha256_json": "2633b9631619b4222777b4ee4a45e3085f059577fb9670f47f5cfeb9256bb5a0"
+      "regions": 46,
+      "sha256_csv": "ce23bf9b6f43197256b6ee76eb3eeb91e587b592346aef07cd91cec8e70ab7a9",
+      "sha256_data": "8d019ad1c6896ac80433468af116ae6520a3221f805ff746cd07113a163a08f4",
+      "sha256_json": "c75d6649b254a3faed4d7500664182ae03a0ae97e532b586f55a90e3d1318e66"
     },
     "IE": {
       "cities": 1942,
       "name": "Ireland",
-      "regions": 31,
-      "sha256_csv": "81936edbb63ef00706a77b6e59bd0fe6725bd3ff74906e1d135c1bb0c35cae58",
-      "sha256_data": "50204f950e2a56fe8d838c59b74ed5b60a821e0735f56c27d09c5f357d15df1a",
-      "sha256_json": "885d04aabee4f5677adeef6708808904328779bde1af05c50264b7c1086dbf5a"
+      "regions": 6,
+      "sha256_csv": "f7e0d1ee2396a68a9148aa6b2904f2ca50d184af08e9c1874361d2c845aab635",
+      "sha256_data": "15a7f19e16f70df0f946b30565c8c060455dbbd4b630cf76882639b7b5d0a51a",
+      "sha256_json": "b7d74a74eb96cfa2a4dbab212f66fa0ceadd0244d9531f75757a125b67e03f98"
     },
     "IL": {
       "cities": 793,
@@ -868,10 +868,10 @@
     "IN": {
       "cities": 86577,
       "name": "India",
-      "regions": 38,
-      "sha256_csv": "d6ff38bf2652e1867248f22e3f89689caa468513ad04b76812de7becea4d2ed6",
-      "sha256_data": "24d2df8c735b47ea9ac129320eacccb160f7b7fe900546e15ef92390d38b1c78",
-      "sha256_json": "9f6d000f7003f360a795bbd7286b329f51e412c37350f54a16ce1380c8f071ca"
+      "regions": 37,
+      "sha256_csv": "1424cee570e255f571b93c9b56b95b90a1f0e647ecb083a1c8774ddd4fd691f8",
+      "sha256_data": "f7a8801417c1253c31c758d901a9184a168c74651e0fccc9623799f05eaddd75",
+      "sha256_json": "b5a4c9092a86dbaada8706ddeab2be0261734aaaf9a66faa36efaec31fdc0322"
     },
     "IO": {
       "cities": 1,
@@ -900,18 +900,18 @@
     "IS": {
       "cities": 242,
       "name": "Iceland",
-      "regions": 52,
-      "sha256_csv": "faf42baa5258e9e5c1ab8d1192c4f5439dda5d1ddb6210f4e9f116d90d9f07c9",
-      "sha256_data": "c72ab2d226feef18889284dd8472897ee9811701a0ff2d8e6f068586c518bd0c",
-      "sha256_json": "74855c0a2baf7a4d8c4589b7794461fd3c9d14f470023e3a4b72a5b56904a8d8"
+      "regions": 9,
+      "sha256_csv": "ff337312afa20802873b3df03d3220dfad7db62fbff71f86bdf54d6675f1b6be",
+      "sha256_data": "f1b4033c1e59879713bc96d38d1144cc73abf3c075f37043aab67b9798ce9157",
+      "sha256_json": "95a5cd9d4125b9ad3dbc656bf63304412e80636cbc2d7b094bd41a8bd88ca47c"
     },
     "IT": {
       "cities": 66290,
       "name": "Italy",
-      "regions": 122,
-      "sha256_csv": "79373ecbae96f115ca056219502cef4d8faf0527f833d2c7f521bc191a76302e",
-      "sha256_data": "6ff3d3079ee45c347f8be8ce3250b5217e6103c2f2d8764abbe9f482c515baa5",
-      "sha256_json": "8a1045c1004eb626c22f0a051729ebff9810a71e35f701f09c498ed7de838cb9"
+      "regions": 21,
+      "sha256_csv": "3dda819c2991769707c0d100adc83375b6990e992da635f0fbac1b17163d2257",
+      "sha256_data": "76332061942e88c14a71011255fe875b1421913a5896bce8f12c82e7e070e344",
+      "sha256_json": "49d1ac7510c33801a1008124a35e4c8f21c82e0cb377a42dae52eb5223724dd7"
     },
     "JE": {
       "cities": 3,
@@ -948,10 +948,10 @@
     "KE": {
       "cities": 1688,
       "name": "Kenya",
-      "regions": 56,
-      "sha256_csv": "eb0903fcda27acd2eec2d7eaa9d7a36d86bece6454109e3066c8ce81555ebbb8",
-      "sha256_data": "6292be6e7700fad56347ecdc8da23a7198ae0d2b6e5a95f1de41fa0d984eec87",
-      "sha256_json": "f0dc3754b611ebb65656649eaa11d23b940e45901e1f93dd0ae5ec831aee2876"
+      "regions": 43,
+      "sha256_csv": "52d81fb8c9d17feaae6f28f13e5078eb48c87655b6f2b358630377212d25f0c7",
+      "sha256_data": "3d44f7352f82ba2861ad2b255a3ff9dd0bfeda1c319b78cdb7cbf224e6eb2885",
+      "sha256_json": "69fb8e7e0314824f546521de62b5f2588a57849d1ff3a9f55ac429dd5d4ee66c"
     },
     "KG": {
       "cities": 1800,
@@ -988,26 +988,26 @@
     "KN": {
       "cities": 35,
       "name": "Saint Kitts and Nevis",
-      "regions": 16,
-      "sha256_csv": "32ea4d1f181dab721139b3a0ebae4646ca9edacb9ef9014607ba69f1d55c257d",
-      "sha256_data": "a97454d66bd54e621acb97f0a25a64133b486c0f3c9ec39c2f03d0e3d2482be9",
-      "sha256_json": "58c0ff8b155d86c20f591fa1a7e24aed9fddb48ebf29afde83b4741fc628812a"
+      "regions": 3,
+      "sha256_csv": "7c2a434981762a921e201f7495116c2ca218e4acccbfd08f215aae7ad93e17f6",
+      "sha256_data": "fc4e74f78c9e8639dd7c92007a2770466d58bdab586a04b5af62e9f60906c0b8",
+      "sha256_json": "7975b26d3cd13534f31bbf892ee815be0413220d409c8513115c4786d9255d59"
     },
     "KP": {
       "cities": 94,
       "name": "North Korea",
-      "regions": 14,
-      "sha256_csv": "3464329675f6cd48e1f2eac74d7598d4b1139c3ed5e15bc6d73b6c0cefc8fefd",
-      "sha256_data": "a7d2fe8311016b157257b876129dc7f85872863eed8692f20e931c8d0acdfc2d",
-      "sha256_json": "6de9b650add10ba08e5b66aae9d390d5f466c1e986a8ad988dcb31d66e5512a8"
+      "regions": 12,
+      "sha256_csv": "4ed53736be3425d95f40acea3d009549468d63bb0218491ce6f8aa7c6112c117",
+      "sha256_data": "575a33fb16f01e48fec45805e14de26c5c606e7dc79b73bf2e774c70782e6c82",
+      "sha256_json": "de2a948a5e83288a66dace2071739de7d47bfbf645f3b01ccccfd92287c1f5cc"
     },
     "KR": {
       "cities": 3157,
       "name": "South Korea",
-      "regions": 16,
-      "sha256_csv": "a43912cf60803428a29d9b9fef026f1320dac05853a7c21340db72838b6582a6",
-      "sha256_data": "d70733e6b745413dce04c4e4cad53f4f80fa03df313e281e8a494bac9aa41b14",
-      "sha256_json": "01f677884280dfb0b74f86e02e0492be40dc3ea33d487783e308c1a31ba4d8e5"
+      "regions": 15,
+      "sha256_csv": "0ef35b7fb06e9a5147eebbdd4054c7b882b96dfa876741a2b9e60d9caafc47ae",
+      "sha256_data": "f8e08985af3085438a8042016099af0f1fdd2abbee07ae73473e4c3d6d0e0615",
+      "sha256_json": "33e0062c892d4f4e6d6623efb740be887f790d93ad75fffbf8a70ace1834e13c"
     },
     "KW": {
       "cities": 36,
@@ -1068,10 +1068,10 @@
     "LK": {
       "cities": 2454,
       "name": "Sri Lanka",
-      "regions": 35,
-      "sha256_csv": "80f3d9105bb94c4e4805cb0f1ebe042c3c8184e522294283b83a735899d9f468",
-      "sha256_data": "c3a6a5c765c1184386faeb483702ba3dd23f1741dc0f2f287b2cd0220fcb2653",
-      "sha256_json": "d1c46719cb267a0e1a9070ba3ae44844c78b1ef0dac901451c08d152703e583b"
+      "regions": 10,
+      "sha256_csv": "e155e61c82fa6dacacbea9a9280e135694cc780b41559b7d030592156fd02790",
+      "sha256_data": "441b1cc2867b9f1495dd718d1693e478e0017e5092ad3dfc990c47bce22198d5",
+      "sha256_json": "6cebf72163000f2bbccc9784c45ec9f62253aa401bbaa84fecb0ca47df24b0de"
     },
     "LR": {
       "cities": 99,
@@ -1108,10 +1108,10 @@
     "LV": {
       "cities": 8356,
       "name": "Latvia",
-      "regions": 45,
-      "sha256_csv": "30fb852e3bcdc1ec52ed581549900b7343870e43cb0c14fed3ddde9219a6afb6",
-      "sha256_data": "145603f71fd639332e1e878805ae2bbd3184d3d370cc18486b7a80d77bb26763",
-      "sha256_json": "1ab9aac17f237b38de27b7d410b1b55662642f221e57990555d221f10249fe98"
+      "regions": 43,
+      "sha256_csv": "0c827b367df685006dbb928b25367124c8fa92fe16342f2f65801acf7738fbbf",
+      "sha256_data": "da32f2fa9b3f473ac83f9f375f9d50a6ee89037c121a8d9b48ced0518d05a37e",
+      "sha256_json": "77e6870beb0742ae6deaefdc94e0cb7fe8a305fe831f1ed2113afe661a54f95c"
     },
     "LY": {
       "cities": 439,
@@ -1124,18 +1124,18 @@
     "MA": {
       "cities": 4109,
       "name": "Morocco",
-      "regions": 92,
-      "sha256_csv": "206411a1cd6928f10c11005f68ddfb0a37014faa6bd25082e656698da78e7c37",
-      "sha256_data": "4d824402c12a63a5bf9acb5e39ff14a7a9a823d232307ccbf9a7addfade835ae",
-      "sha256_json": "f3aefcc2291deca79257ac66927143b4644729984e83cc73e5357d916e299147"
+      "regions": 15,
+      "sha256_csv": "a668a1770550fc27719ec18141ef752ec53daebdb668f96dd34b4045d2145672",
+      "sha256_data": "68650412f113f3fd765a91ca0b30d17585d5e46b449d99d5df16a7ccb795399e",
+      "sha256_json": "495566a94a167a6917721e03cf9db43b2e2317e48480000056f561c5f5066bc1"
     },
     "MC": {
       "cities": 18,
       "name": "Monaco",
-      "regions": 17,
+      "regions": 16,
       "sha256_csv": "2d265d01f732b8191d1011a1bfd0dd3e62b5a39b24266923eff1cec22edf381e",
-      "sha256_data": "60fb01b633487b9056b13dcdbdbc7bba7799e00d57448efce473eca64fca3c71",
-      "sha256_json": "eec6cd990864cfb80fcd0765a32f43bf17ae924a13ae218588887033eb0706ba"
+      "sha256_data": "00b8e7ffe3740df90bee807dfc61039623e16fb0b252457f0ed90de22b0d4f7f",
+      "sha256_json": "d66a6e25de37d1db07a53d59c48bf720fc86c39e17f45b54120179b5647aad34"
     },
     "MD": {
       "cities": 2114,
@@ -1148,10 +1148,10 @@
     "ME": {
       "cities": 1364,
       "name": "Montenegro",
-      "regions": 27,
-      "sha256_csv": "766f127190a0b8cbb06f57b1a3942d263d5332cf28ecba982c94ef1de6383e93",
-      "sha256_data": "5911b254a1b1e5302f45753778c9c3bcab4aadd36c4c61fe2bf0df182ee939e5",
-      "sha256_json": "62aed39cca006a7fde8d43a24011bf1e9ba28da310c1a39244f5f000522b4e15"
+      "regions": 26,
+      "sha256_csv": "ef376a04f0c36b8e823f52322de1a9c1bdfd2d75ab482f554ca29ebb859eece1",
+      "sha256_data": "74b38468f9dad2538d74fab4855b22e624418464e716e27d6778b53cef9b346f",
+      "sha256_json": "58841bfaf1054b9f9eabb0a191e279132e0006c30cea9a811ed721fb982787ba"
     },
     "MF": {
       "cities": 11,
@@ -1180,10 +1180,10 @@
     "MK": {
       "cities": 1875,
       "name": "North Macedonia",
-      "regions": 80,
-      "sha256_csv": "a7d5992d1868589de3af06b5eeddab57b2b2611cbe50fcd8eb7fc7c3a7cc3561",
-      "sha256_data": "63faa3338d044d2c43111ad0d5389942bd342311574009b87e9ca589d915a3c1",
-      "sha256_json": "91af4c797c82fc0ce213e3372a2951357ddf756618840b307d92ad48f0227a1e"
+      "regions": 70,
+      "sha256_csv": "5cdb4677711576e6d128bcf07e1297f0958b8c88d3651b3d30d7c9504223066c",
+      "sha256_data": "84ffeab0c1eeaa03eba4fde46a79a06deb08588cb0ee5233b38304af6890b054",
+      "sha256_json": "a9ded4ce91ee9a9aa056e5e565d327f9fadda9bc5ee62870a2a780f3a8362faf"
     },
     "ML": {
       "cities": 975,
@@ -1236,10 +1236,10 @@
     "MR": {
       "cities": 255,
       "name": "Mauritania",
-      "regions": 17,
-      "sha256_csv": "313f3e069ddb1b4a78b90085027b50a86052db20e442a8411883170b1d4338a4",
-      "sha256_data": "a23ea5f78de29f316a1aa52232481b4821225fb56ae2dde026e111c6bf569ed7",
-      "sha256_json": "3187ec95cf42188d66254f15769038f7d4972e84c96ce429d3705a4942e392f1"
+      "regions": 16,
+      "sha256_csv": "556e8f0719fa5a5b6f01e6755df0fb9fbfd66dc45f0dd78a500107b85b956f3b",
+      "sha256_data": "1d099186b46df3954787bc3aeee5797fc4e366ec5924fc62b1de5e349060f186",
+      "sha256_json": "86a29471c61da86202f5ab3c321667fbfc683ff0cb237c0b666593d087f0f037"
     },
     "MS": {
       "cities": 9,
@@ -1268,18 +1268,18 @@
     "MV": {
       "cities": 34,
       "name": "Maldives",
-      "regions": 29,
-      "sha256_csv": "32b84339fd514ef48673fe268fb3042ddc50e0ef20bbb58ec4f752bd782579d0",
-      "sha256_data": "dbeb759d1cb20ddb72728c380e2267b091a94c96b828432701c12aca6e13b741",
-      "sha256_json": "539296bfc141301e8d435dfbbd4181514d8bc604eb6c7399cb1df6a8e92bb992"
+      "regions": 28,
+      "sha256_csv": "a6ff7364e808a73371a476c7e06098662d25b977340cf0154c249b2db8f99be2",
+      "sha256_data": "40e8d05ba169ed138f52420aef85321242de7586bd769db1a1579a8f0a8ba155",
+      "sha256_json": "a15ca2380e67956e1b353a3b3c892c0efc1bb0d4f63d67b659aff5b181143fba"
     },
     "MW": {
-      "cities": 127,
+      "cities": 128,
       "name": "Malawi",
-      "regions": 32,
-      "sha256_csv": "92a4c1404a3d4e7e3aa003b43eba9d890110951a492badcc3e07d1950e34dbf3",
-      "sha256_data": "4593d43956a8bbd936e00091ead04226d9210ed21a8c1e9d83ec1d6481bbdb19",
-      "sha256_json": "9c1817e7f6f0a9c0cfbebe83ab31318759fb465779bde43c46f51e8d870ccbcf"
+      "regions": 4,
+      "sha256_csv": "d79e98e93432f485dc86e74fd76593bc9308d30fa7952bd338ebc19a279a160f",
+      "sha256_data": "6f3cd526c54e78796b9a40100cb25157bbb97a28936b969f1efe141f6bad465b",
+      "sha256_json": "0ae6fbadfbc5cb99809c447052f5c16196f6edae8bf878e5f214ae446be42649"
     },
     "MX": {
       "cities": 200941,
@@ -1338,12 +1338,12 @@
       "sha256_json": "3ed7e26f98ba259fa7e68c9e5c36efa499ae5bb2c08a01d9981774cd47ceedfc"
     },
     "NG": {
-      "cities": 5443,
+      "cities": 5444,
       "name": "Nigeria",
-      "regions": 39,
-      "sha256_csv": "ac79be90f03a05f483254a8c83ff490eaa52ffc8374621987ada5d6063dfd9d0",
-      "sha256_data": "13e5f101f8102b7ee47035a434020a80bc34449c6fa5ed1dda4d253f3e7725ea",
-      "sha256_json": "9bac76769b1fe5cf764932c4c28278368b1c01d44bff27404851a39be2315da5"
+      "regions": 38,
+      "sha256_csv": "fd8b07fa1c5ebc75d1c5327e5f75c63fb67c88001cace3a09991e8cc50ddd422",
+      "sha256_data": "a48aa12b15c086bf0e18361298fc67b665e738770fa5e82345579a0a6e455d52",
+      "sha256_json": "bd87fcd8b49b7cdd335f21304fde72c53fc168b8ec4b50f9dcb9fcd45d3dd6a3"
     },
     "NI": {
       "cities": 3556,
@@ -1364,10 +1364,10 @@
     "NO": {
       "cities": 8107,
       "name": "Norway",
-      "regions": 19,
-      "sha256_csv": "01d774fb95aa721fc298f2c831bec2f0893bf1e4545f6650e372c47acd8aabb8",
-      "sha256_data": "8b97a8a8d82408eebbe8c01ea544a261449513eb938fb954d57eb9b31a70ffd8",
-      "sha256_json": "a4049d2d7e0e2228ba1c05d24c1c0a0f69786733c4013511933b988fb559bee2"
+      "regions": 18,
+      "sha256_csv": "f72db4a2be6db511dcb0a6440053ab6e141a871c019a5cfb01ff039e09afa8a3",
+      "sha256_data": "0b469bd60c15c7b46202ab743c93d0a6cc5cd4f6f87850da31b4f97d8c2961fd",
+      "sha256_json": "964c1ff51f34c8fa7e6132c443fe03036ce6d9e971d1600a4f5e70901612b576"
     },
     "NP": {
       "cities": 2079,
@@ -1420,10 +1420,10 @@
     "PE": {
       "cities": 6884,
       "name": "Peru",
-      "regions": 28,
-      "sha256_csv": "c5c314d02cc48017b8bddee0de689f87e79bcd545f29e072988c4931ba1d2ad5",
-      "sha256_data": "bb7c4e72805819b6a3795a414186d7e38a9b8fae418e2fafb8659be2b442ad77",
-      "sha256_json": "308e9fd1269739eff2795faaf43a27b39e02148e6a77abc4270d02fb4ccf586e"
+      "regions": 27,
+      "sha256_csv": "1577ff085be2d0a7bac62893892c030b481784f6e047fcfe87f00ea05f652ea7",
+      "sha256_data": "e397c88107b43517372c55a6db4e7a9f100ba380790f020010b9691e9706eee8",
+      "sha256_json": "df879c69d5dc912ba2aa64643ffa87d0bc591ad7d1226f931d724f954d7b1ef2"
     },
     "PF": {
       "cities": 134,
@@ -1436,18 +1436,18 @@
     "PG": {
       "cities": 228,
       "name": "Papua New Guinea",
-      "regions": 23,
-      "sha256_csv": "fe432e4877d29d728e3b803125b6fd186f3a454de6342307712b4f9908ccebf5",
-      "sha256_data": "720f91a62af044a7db60c356fc51ceee519ee1403809d6d909fc37ee348d79a2",
-      "sha256_json": "08ffe395386023ba648ff25919e59990f2036c0ea5dddb6b6539d4cf8d72472d"
+      "regions": 20,
+      "sha256_csv": "d9531254610ce2f1a92bce4d4de7210298b6e6b80cf4d11c7a825ed898fa9f18",
+      "sha256_data": "842e6db2ba7a65db4e0deb2126e085c59926f780274e6db7e820f4bf67e6fff8",
+      "sha256_json": "eb5029f0541779b888c2f629fbecd3bf5bbeed38cc738181d5106883f4951b28"
     },
     "PH": {
       "cities": 5640,
       "name": "Philippines",
-      "regions": 97,
-      "sha256_csv": "295f30d35670a82b1af6688c793d766e810bd0a68bc260628cb2426e94d04505",
-      "sha256_data": "11833926e1dc3e47d92053414660e77f079abcc572ae1dd4dea5ef3395f6456f",
-      "sha256_json": "2f3ebfd79e8519f153ca01d0f393fd0351d6353dfcbcf5de306bb2e14f78a9b5"
+      "regions": 25,
+      "sha256_csv": "4d8075551a8042779e5ab32f92f910e87b56af94ea033bade98b7ad7639c6a65",
+      "sha256_data": "abba452f749c6ac2fe5e3f4c68d750ba820a871e0e6132426e309453e8ca5f08",
+      "sha256_json": "c8368c9ed9d688b34feec09310b76bb02ab393f6306c20ea6f0c4d9c4d11c45f"
     },
     "PK": {
       "cities": 3061,
@@ -1460,10 +1460,10 @@
     "PL": {
       "cities": 70009,
       "name": "Poland",
-      "regions": 18,
-      "sha256_csv": "9758785949b81a43df4ad4659ac1a63ede9c136d002f12412021917019c38304",
-      "sha256_data": "bd0572912fe018392ce12d34dacea87940f7d59ec2ac8b8b16e86437b898a248",
-      "sha256_json": "a219ecc496bee9c2bf5d55e74efad8c6c5bfd9cf846a9980c7ac4aa5c07cc48e"
+      "regions": 17,
+      "sha256_csv": "4aa8abda51d499474e8631ad5dc192ad4d7e1f90896c468eb1274fb7d4e2c2ad",
+      "sha256_data": "c730c782089a2a6e8cba145080cb3c2da61718db5a8048ac4f88a6c63683ac64",
+      "sha256_json": "3b42b4840a0238e2fdc3946d041ba59175efc0c86faecc9706f4f4f2d884a330"
     },
     "PM": {
       "cities": 4,
@@ -1498,12 +1498,12 @@
       "sha256_json": "1997a8bf5f098fb6355800dc4fdf01d4048dab331b30fb9e54b4535b9e6dcbc8"
     },
     "PT": {
-      "cities": 4442,
+      "cities": 4443,
       "name": "Portugal",
       "regions": 21,
-      "sha256_csv": "feb8d137feec859d2d3d9c87544b74ef6f7d0dbc87e24ce0037c0a5415aa0d50",
-      "sha256_data": "3457654ec2a2257a59d9f81b7d32ab84df0f769f9ee959606d7391f4588c1091",
-      "sha256_json": "76e227b6f4c5c0482bc1190c0d7c86bf3e5b7d6080ad0b5d662b3c04930e1692"
+      "sha256_csv": "3d3e280a5b4f9e363bec4421c2034d3587a918497d6e0a13ac3a529e72b1b522",
+      "sha256_data": "590a5df2849394f5158b87e9ef1271044303b29183dfa0d18195a8db4b026000",
+      "sha256_json": "9c4270c17cd8bd6f06828808646e8cfa6083ae0448f3d531bc59ea03100c0b65"
     },
     "PW": {
       "cities": 48,
@@ -1546,20 +1546,20 @@
       "sha256_json": "8371709547aa23d1546a3d219c43ef2b38c0bae41d8b4a22f32468662b213c6a"
     },
     "RS": {
-      "cities": 5289,
+      "cities": 4960,
       "name": "Serbia",
-      "regions": 33,
-      "sha256_csv": "9fa092e046dea84add64d52c037efb429f6e4e1d26c8ec1108f170232d1cfbbc",
-      "sha256_data": "5f068d7de85ed79a94b8a4ff0604a6bdfd908b19eeac7cbee6c52a587dcc5c03",
-      "sha256_json": "d12c009e19ddfbef423fc3b4ae1cec1377d57507a98300c92416eb8b23e689ab"
+      "regions": 21,
+      "sha256_csv": "9017f8ec09612a3fe36ee73fbb3c2d6363ad42e82278d690fd2f69594a25c293",
+      "sha256_data": "9486b835da0c270ed79a648a3665bc62182b61e6f3601e737c39e9b6e81c841a",
+      "sha256_json": "f81ff77c24ba0920f1edca61d32b1451fdac0358558d550d666099d2c4e44489"
     },
     "RU": {
       "cities": 153920,
       "name": "Russia",
-      "regions": 84,
-      "sha256_csv": "2cfeb09312160a5de57c6ebde14c8bfa43507195d0dd9c872846c1600033056e",
-      "sha256_data": "1fedae3a1a9ec8fa6937ceb5b3ce558523ccba7ecde3dbb2feacbc4ae6bdc92d",
-      "sha256_json": "a562281661eb2099f9e30f636e4a98f55246e6da774824ce8c91708ac9e8a061"
+      "regions": 81,
+      "sha256_csv": "c8136d72b77837f7e48e84d83922e11e982eac7f4f785d04195d6a9fcc12f309",
+      "sha256_data": "79b504a0ca2f2da642999448430b89760428794245890ebdf0c1151347190a28",
+      "sha256_json": "39257b37282d7acb4a232de6eb58fc10f8bd069ab44d3ea7a5a5af867c6ef9e7"
     },
     "RW": {
       "cities": 92,
@@ -1580,10 +1580,10 @@
     "SB": {
       "cities": 142,
       "name": "Solomon Islands",
-      "regions": 11,
-      "sha256_csv": "52b5ebd5e9bc34cd3c0738ecf1286e92aba49367c28ebc199cb9832d34805e54",
-      "sha256_data": "d8c67cb1f794516aac0fa69e0e1a864a21a56458c81d985521f3b5d204d8610a",
-      "sha256_json": "66259e731fa1392c41279796b6c0a1595227ef570a0e82b1f4429c8db24495c0"
+      "regions": 10,
+      "sha256_csv": "8c1fba1f5462c9f8e67b8087caae86a1edbf2267f1e3edc1784264a64ce17ac0",
+      "sha256_data": "c7a5590836a59b4c55c8b5deb9cbacad742455c310b893ad5027934165658862",
+      "sha256_json": "252d0a95d8e7b29e2e7607708144228d29045bc1af92c3b21d1dc72ab22bf0cb"
     },
     "SC": {
       "cities": 27,
@@ -1628,10 +1628,10 @@
     "SI": {
       "cities": 6528,
       "name": "Slovenia",
-      "regions": 229,
-      "sha256_csv": "c703dbc5e2a3b3a4886bbcff6d9e9fb7e2a472ad043cc8f90b8681f2e0f5e117",
-      "sha256_data": "5e014930d16ff65ddbaf47c8d7ce15386cf50c9efc1ac04805bd5d7efd120949",
-      "sha256_json": "ff287a3008e9b6a03bc1e739096047b7ed2ce8bda1e06ac39c87f4126cade961"
+      "regions": 214,
+      "sha256_csv": "d50f7583ea3d55e9e28acad96b7e0e6bb678ace00953bed3aa387e164d7f249d",
+      "sha256_data": "98ddc22c7c65c1787a7ffb245775f982a4e55749db88c1160fcba5acc5086515",
+      "sha256_json": "8d569b2039538a9010744c862a3805395e771e3ad33a063315a79730a8c56321"
     },
     "SJ": {
       "cities": 0,
@@ -1642,12 +1642,12 @@
       "sha256_json": "187bdc162c9cfd5e7357f452f2a3bbfb4a59e602c5fe9ddfcb4238a712587afc"
     },
     "SK": {
-      "cities": 3674,
+      "cities": 3675,
       "name": "Slovakia",
       "regions": 9,
-      "sha256_csv": "d2cdc4d3cca1415f1428ce596e65ec1d13fa8c7555c3813497fdcca4b88aedeb",
-      "sha256_data": "0324eeab85bf9c0581b2f23acb6967821e2b317e35d1893e29f4d6417ac8b7fb",
-      "sha256_json": "1311b5ccd966ee830f20b3f4816dbcc3a87592a5e838d563a8ca9bae62d588cb"
+      "sha256_csv": "1a2680999ed22aaabe9384fcb9f762fbf86d523448d25e3a735e5472abebbdb6",
+      "sha256_data": "bba0f3e33e8112e9eef44ef35edf0990922dbf0608a8996938dd6a58fa501c00",
+      "sha256_json": "cedc2e59b4cede1a49347239f9a906455ce4c76b5bd0c62362825c2eba97fb03"
     },
     "SL": {
       "cities": 183,
@@ -1780,10 +1780,10 @@
     "TH": {
       "cities": 1228,
       "name": "Thailand",
-      "regions": 79,
-      "sha256_csv": "4dea5b3fdd4fb65e2d8729153719c438097d2df3a5622d53a3fc4384e25f5460",
-      "sha256_data": "7eca0591cb2e3092557d26229b44d7f586ccf2790031cd094fad03dd149e9aa8",
-      "sha256_json": "b14b30eb660549de6f5d855d1746fdd4b97d6732f8dce437c35ddca983b3c651"
+      "regions": 78,
+      "sha256_csv": "10649b433db15982b2d72b0e4620704cefe334fa13ac68a9c715575a55d9fa09",
+      "sha256_data": "d9ea3ceaa6c25980aade5a1c62e3b9b3d0a025ccc7d4c4ab87401a812b702dd2",
+      "sha256_json": "cb6dc9c8a8dc7bed10096f6f69a25b897392294ef7650da82324abc7ebfbd5bf"
     },
     "TJ": {
       "cities": 1246,
@@ -1852,10 +1852,10 @@
     "TV": {
       "cities": 39,
       "name": "Tuvalu",
-      "regions": 10,
-      "sha256_csv": "45a9c6469ef59991f5026bacc1d6d97ab4612eb21415179112bc300c13aeea8e",
-      "sha256_data": "04aae155864724502555e8bd728fc8f8e31ee5983fdc354adfc750329819ef51",
-      "sha256_json": "57bb9bdb21f180a9a6340bcac115a1dd884ccec156b6fc0b40042b772551fbd5"
+      "regions": 9,
+      "sha256_csv": "a6b09bbbe4b456ce063d0a41f215dbb84ed5ba87db4a8fb5389c86226c633f34",
+      "sha256_data": "dee51f9b6081aaff54e12c3ae988c3252600ea85293b3905940fb06284b4944e",
+      "sha256_json": "dabd860abe1de44caded3c7ca8c8794f1a6b2e44b8a268ef9000c81426a35d49"
     },
     "TW": {
       "cities": 8240,
@@ -1884,10 +1884,10 @@
     "UG": {
       "cities": 817,
       "name": "Uganda",
-      "regions": 134,
-      "sha256_csv": "9949423b245f22ba02b1b968bfaa4122ef4847b7b64294b0fa60fa4118cd858f",
-      "sha256_data": "97f6bb6940a1ce2481987239e1c6a39b26bb48b21ac8c4701bb6965223bd4356",
-      "sha256_json": "4c206a9c786dac64e6a22aceb15347fc3f5ca1afac8e565db07c1043a4ef9105"
+      "regions": 5,
+      "sha256_csv": "6f848ad972e587f833749e35ce90c984cd7b1192affe4fc823b6dc1bd3612577",
+      "sha256_data": "1ef9c8c926b27d0fdb40254e24f3c11a02fd3528e519be05eb4b12817316f283",
+      "sha256_json": "40cdf1d00fb25363e93fa3b4146e72f7cf6e9b5b237bc7d3924e89ab5a90e266"
     },
     "UM": {
       "cities": 4,
@@ -1994,12 +1994,12 @@
       "sha256_json": "a673a44570c247a31903e6d99d7d7291022663fc1f81682312f6a36ceedb1956"
     },
     "XK": {
-      "cities": 1242,
+      "cities": 1571,
       "name": "Kosovo",
       "regions": 11,
-      "sha256_csv": "9960ef5167aca2808230f8770a00446cea4e4350a600e9494f57920978e38d68",
-      "sha256_data": "b2d56e33e6cd60ade3bb40c8ae74a7f40a1e37a1cc301f2520c7e3cba11f378a",
-      "sha256_json": "68cfb6f595d2023f7a6a224e552cd5467e58b582f152a3acd8878438869b1677"
+      "sha256_csv": "8414e7efcf7ea3fa89d1baf50a20f0fb3ec2b7b5fe2312698a82c1b39c7a7825",
+      "sha256_data": "e367947c396e5209a45ea066bbfb0cba5fe133b18f0c3bd10faf4f70beb9d7d3",
+      "sha256_json": "a6b5c971fced4ecce0084cfbc9dcd7f380815cdc7739f823c8f311e130410876"
     },
     "YE": {
       "cities": 11509,
@@ -2043,8 +2043,8 @@
     }
   },
   "countries_total": 255,
-  "regions_total": 5908,
+  "regions_total": 4481,
   "s_license": "CC0-1.0",
   "s_source": "https://www.wikidata.org/ (Wikidata truthy dump, CC0)",
-  "s_version": "82c26b126f562c57"
+  "s_version": "86159ff7e7de3388"
 }

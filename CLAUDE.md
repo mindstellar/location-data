@@ -115,6 +115,28 @@ memory than the machine has. Both closures rescan the flat `int32` array until
 it stops changing, converging in the depth of the hierarchy rather than its
 size.
 
+## What a region is
+
+The **root-most** ISO 3166-2 division: one with no other ISO-coded division
+above it. `keep_root_most` in `contain.py`. ISO 3166-2 is flat, and for about a
+fifth of countries it lists two levels at once, so the alternative -- keeping
+the leaf-most -- gave Czechia 109 regions instead of 14 and Bangladesh 74
+instead of 8.
+
+Two things this depends on, both of which were wrong once:
+
+- **The ancestor map must close upward, not stop at divisions.** A chain from
+  one division to its parent division often passes through something that is
+  not itself ISO-coded. Building the parent map over divisions alone left
+  Lithuania's municipalities all looking top-level, Czechia with 31 regions
+  and Britain with 137.
+- **Nothing is held back as a coarse fallback.** That existed to catch a
+  capital whose P131 pointed at a coarser division than the selected leaf.
+  Selecting the root-most removes the cause, and keeping the finer divisions
+  as coarse seeds would actively hurt: a settlement inside a departement
+  reaches the departement and its region at the same depth, so the tie would
+  break on QID and scatter settlements between two levels.
+
 ## Traps that have already been hit
 
 Each of these cost real time and will look like a fresh idea to anyone who

@@ -14,7 +14,7 @@ outside single-zone countries. Those three have specific causes, given below.
 | | |
 |---|---:|
 | countries | 255 |
-| administrative divisions | 6,036 |
+| administrative divisions | 4,481 |
 | settlements | 1,745,358 |
 | with coordinates | 100% |
 
@@ -64,6 +64,43 @@ Per country, the block is 92–100% filled for capital, continent, currency with
 code and symbol, calling code, ISO alpha-3 and numeric, demonym, ccTLD, flag,
 population, area and official language. Timezone is 83.9%, for the reason
 below.
+
+## What a region is
+
+**The first-level ISO 3166-2 subdivision** — a division with no other
+ISO-coded division above it. India's states, Germany's Länder, Japan's
+prefectures, Spain's autonomous communities, Czechia's kraje, Bangladesh's
+divisions, France's régions.
+
+That matters because ISO 3166-2 is a flat list per country and for about a
+fifth of countries it describes two levels at once. Taking the finer one gave
+109 regions for Czechia and 74 for Bangladesh — their districts rather than
+their regions and divisions — and made "region" mean something different in
+every country. The no-ISO-parent rule is the only definition that is
+consistent across all of them.
+
+Cross-checked against Natural Earth's admin-1, which is public domain: the two
+agree on India, Germany, Japan, Brazil, the United States and most others.
+Where they differ, Natural Earth is applying per-country judgement rather than
+a rule — it takes départements for France but autonomous communities for
+Spain.
+
+Each country also has **one region named after the country itself**, which
+catches settlements whose containment reaches no division. It appears only if
+something lands in it, which is why counts here are typically ISO + 1.
+
+Four countries do not land on the ISO count, all for reasons upstream:
+
+- **Britain** ships 7. Four are England, Scotland, Wales and Northern Ireland;
+  `GB-EAW` *England and Wales* and `GB-GBN` *Great Britain* are ISO groupings
+  that overlap them rather than divisions of their own.
+- **Greece** ships 19: the 13 current regions plus prefectures abolished in
+  2011 that still carry codes and are not recorded as being inside a region.
+- **Lithuania** ships 71: its 10 counties *and* its 60 municipalities, because
+  Wikidata does not record the municipalities as contained in the counties.
+  Lithuania abolished county administrations in 2010.
+- **Morocco** ships 15 against 12 regions, the extras being disputed-territory
+  entries.
 
 ## The three real gaps
 

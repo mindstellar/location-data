@@ -51,7 +51,7 @@ from classify import (
 from contain import (
     DEPTH_SCALE,
     CountryPlan,
-    drop_non_leaf,
+    keep_root_most,
     propagate_containment,
     select_admin1s,
     select_admin1s_under_country,
@@ -175,14 +175,31 @@ def main():
         print('  skipping %d dissolved states: %s' % (len(defunct), ', '.join(defunct)), flush=True)
     wanted = live
 
-    # Parents of a given entity, for the leaf-most test. Built only over the
-    # P300-bearing divisions, which are thousands rather than tens of
-    # millions, so a plain dict is the right shape here.
+    # Parents, for deciding which divisions have another division above them.
+    #
+    # Built over the divisions *and everything above them*, not the divisions
+    # alone. A chain from a division up to its parent division often passes
+    # through something that is not itself ISO-coded, and a map that only
+    # records divisions' own parents stops at the first such link -- which
+    # made Lithuania's 60 municipalities all look top-level, and left Czechia
+    # with 31 regions instead of 14 and Britain with 137 instead of four.
+    #
+    # Closing upward is cheap: a few thousand divisions reach a few thousand
+    # ancestors, not the 13.9M entities the full graph holds.
     division_ids = set(admin1_candidates)
+    reachable = set(division_ids)
+    while True:
+        added = 0
+        for i in range(0, len(p131), 2):
+            if p131[i] in reachable and p131[i + 1] not in reachable:
+                reachable.add(p131[i + 1])
+                added += 1
+        if not added:
+            break
     parents = {}
     for i in range(0, len(p131), 2):
         child = p131[i]
-        if child in division_ids:
+        if child in reachable:
             parents.setdefault(child, []).append(p131[i + 1])
 
     def ancestors_of(qid, depth=12):
@@ -204,20 +221,22 @@ def main():
     for iso2 in wanted:
         candidates = select_admin1s(iso2, admin1_candidates, settlement_classes,
                                     not_a_place)
-        selected = drop_non_leaf(candidates, admin1_candidates, ancestors_of,
-                                 settlement_classes, exclude_classes)
-        # The divisions the leaf-most rule dropped are kept as a fallback
-        # rather than discarded. A capital city's P131 points at the coarse
-        # region -- Madrid at the Community of Madrid, London at Greater
-        # London -- while the selected leaf is Madrid *province*, which sits
-        # beside the city in the graph rather than above it. Walking upward
-        # therefore never reaches a selected division, and the capital
-        # attaches to nothing at all. This is what left London, Madrid,
-        # Athens, Dublin, Tallinn and Tirana out of the dataset entirely.
+        selected = keep_root_most(candidates, ancestors_of)
+        # Nothing is held back as a coarse fallback any more. That existed
+        # because the leaf-most rule selected Madrid *province* while Madrid's
+        # own P131 pointed at the Community of Madrid, so the capital reached
+        # no selected division at all -- which is how London, Madrid, Athens,
+        # Dublin, Tallinn and Tirana were lost. Selecting the root-most
+        # removes the cause: the coarser division is now the selected one.
+        #
+        # Keeping the finer divisions as coarse seeds would actively hurt
+        # here. They would sit one level out, and a settlement inside a
+        # departement reaches the departement and its region at the same
+        # depth, so the tie would break on QID and scatter settlements between
+        # the two levels. The country-level region is added below and is the
+        # only coarse entry.
         plans[iso2] = CountryPlan(
-            iso2, countries.get(iso2), selected,
-            {q: c for q, c in candidates.items() if q not in selected},
-            1 if selected else 0)
+            iso2, countries.get(iso2), selected, {}, 1 if selected else 0)
 
     # Tiers 2-4 run only for the countries tier 1 resolved to nothing: a
     # handful of ISO2 codes whose divisions are coded under a parent country's
@@ -285,7 +304,7 @@ def main():
                                           if q in fallback_records})
                 continue
             tier3 = select_admin1s_with_dissolved(iso2, admin1_candidates, not_a_place)
-            tier3 = drop_non_leaf(tier3, admin1_candidates, ancestors_of, settlement_classes, exclude_classes)
+            tier3 = keep_root_most(tier3, ancestors_of)
             if tier3:
                 plan.leaf = tier3
                 plan.tier = 3
