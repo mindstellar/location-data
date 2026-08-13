@@ -128,6 +128,52 @@ def propagate_containment(p131, seeds):
 
 # --- selecting a country's divisions ----------------------------------------
 
+# Hand-maintained. The root-most rule is right almost everywhere; these are the
+# places where ISO itself carries something that is not a first-level division
+# of the country, and no rule distinguishes them from one that is. Additive,
+# and each entry says why.
+REGION_EXCLUDE_CODES = frozenset(
+    {
+        # ISO groupings that overlap the four countries rather than dividing
+        # anything. England, Scotland, Wales and Northern Ireland are the
+        # divisions; these two are legal jurisdictions spanning them.
+        'GB-EAW',   # England and Wales
+        'GB-GBN',   # Great Britain
+        # Indonesia's seven geographical units, the same shape: ISO lists them
+        # beside the 38 provinces, and Wikidata does not record the provinces
+        # as contained in them, so both levels survive the root-most rule.
+        'ID-JW',    # Java
+        'ID-KA',    # Kalimantan
+        'ID-ML',    # Maluku Islands
+        'ID-NU',    # Lesser Sunda Islands
+        'ID-PP',    # Western New Guinea
+        'ID-SL',    # Sulawesi
+        'ID-SM',    # Sumatra
+        # Prefectures superseded by Morocco's 2015 regions, MA-01 to MA-12.
+        'MA-MMD',   # Marrakech-Medina
+        'MA-MMN',   # Marrakech-Menara
+    }
+    # Lithuania's 60 municipalities. ISO lists them beside the 10 counties
+    # (LT-AL, LT-KU, ...), and Wikidata does not record them as contained in a
+    # county -- the county administrations were abolished in 2010 -- so the
+    # root-most rule cannot tell the two levels apart.
+    | {'LT-%02d' % n for n in range(1, 61)}
+)
+
+# Whole division types that no longer exist and that Wikidata does not mark
+# with an end date. Excluding the class rather than listing codes catches the
+# ones nobody has noticed yet: Greece was shipping five abolished prefectures
+# and only three were obvious enough to spot by hand.
+REGION_EXCLUDE_CLASSES = frozenset({
+    202595,     # prefecture of Greece -- all 51 abolished by Kallikratis, 2011
+})
+
+# Same idea where two items share one code and the lower QID is the wrong one.
+REGION_EXCLUDE_QIDS = frozenset({
+    209706,     # Lulua District, superseded by Kasai-Central; both claim CD-KC
+})
+
+
 def is_country_item(record):
     """Whether this item is a country in its own right, i.e. carries an
     ISO 3166-1 code.
@@ -171,7 +217,24 @@ def select_admin1s(iso2, candidates, settlement_classes, not_a_place=frozenset()
             continue
         if is_not_a_place(record, not_a_place):
             continue
+        if qid in REGION_EXCLUDE_QIDS or set(codes) & REGION_EXCLUDE_CODES:
+            continue
+        if any(c.startswith('Q') and int(c[1:]) in REGION_EXCLUDE_CLASSES
+               for c in record.get('instance_of', ())):
+            continue
         selected[qid] = min(codes)
+
+    # One code, one division. Six codes are claimed by two items -- Sevastopol
+    # and "administrative and municipal division of Ukraine" both hold UA-40,
+    # Thessaly appears twice -- and shipping both puts one place under two ids.
+    # Lowest QID wins, the same rule the country index uses, so a rebuild
+    # cannot flip which one survives.
+    by_code = {}
+    for qid, code in selected.items():
+        if code not in by_code or qid < by_code[code]:
+            by_code[code] = qid
+    keep = set(by_code.values())
+    selected = {q: c for q, c in selected.items() if q in keep}
     return selected
 
 

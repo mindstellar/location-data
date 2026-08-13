@@ -14,7 +14,7 @@ outside single-zone countries. Those three have specific causes, given below.
 | | |
 |---|---:|
 | countries | 255 |
-| administrative divisions | 4,481 |
+| administrative divisions | 4,401 |
 | settlements | 1,745,358 |
 | with coordinates | 100% |
 
@@ -89,18 +89,29 @@ Each country also has **one region named after the country itself**, which
 catches settlements whose containment reaches no division. It appears only if
 something lands in it, which is why counts here are typically ISO + 1.
 
-Four countries do not land on the ISO count, all for reasons upstream:
+A short hand-maintained list corrects the cases the rule cannot see, because
+ISO itself carries entries that are not first-level divisions and nothing
+distinguishes them from ones that are. Each is in the pipeline with its reason:
 
-- **Britain** ships 7. Four are England, Scotland, Wales and Northern Ireland;
-  `GB-EAW` *England and Wales* and `GB-GBN` *Great Britain* are ISO groupings
-  that overlap them rather than divisions of their own.
-- **Greece** ships 19: the 13 current regions plus prefectures abolished in
-  2011 that still carry codes and are not recorded as being inside a region.
-- **Lithuania** ships 71: its 10 counties *and* its 60 municipalities, because
-  Wikidata does not record the municipalities as contained in the counties.
-  Lithuania abolished county administrations in 2010.
-- **Morocco** ships 15 against 12 regions, the extras being disputed-territory
-  entries.
+- **ISO groupings**, which overlap divisions rather than dividing anything:
+  `GB-EAW` England and Wales, `GB-GBN` Great Britain, and Indonesia's seven
+  geographical units (Java, Sumatra, Kalimantan and the rest, which sit beside
+  its 38 provinces).
+- **Abolished division types** that carry no end date upstream: every
+  *prefecture of Greece*, all 51 replaced by the 13 regions in 2011; Morocco's
+  `MA-MMD` and `MA-MMN`, superseded by the 2015 regions.
+- **Lithuania's 60 municipalities**, which ISO lists beside the 10 counties.
+  The county administrations were abolished in 2010 and Wikidata does not
+  record the municipalities as being inside them, so the rule cannot separate
+  the levels.
+- **Six ISO codes claimed by two items each** — Sevastopol and "administrative
+  and municipal division of Ukraine" both hold `UA-40`, Thessaly appears twice.
+  One code now yields one division, lowest QID winning so a rebuild cannot
+  flip which.
+
+What remains, and is upstream rather than fixable here: **Vietnam** ships 35
+against 63 provinces, because Wikidata files its subdivision classes beneath
+"former subdivisions of Vietnam"; **Kenya** ships 43 against 47 counties.
 
 ## The three real gaps
 

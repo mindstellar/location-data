@@ -627,3 +627,38 @@ class SandboxEntities(unittest.TestCase):
         record = entity(instance_of=[10])
         record['id'] = 12345
         self.assertTrue(is_settlement(record, {10}))
+
+
+class HandMaintainedRegionOverrides(unittest.TestCase):
+    """The root-most rule is right almost everywhere. These are the places
+    where ISO itself carries something that is not a first-level division and
+    no rule can tell it apart from one that is."""
+
+    SETTLEMENT = {10}
+
+    def test_iso_groupings_are_not_divisions(self):
+        """GB-EAW and GB-GBN are legal jurisdictions spanning England,
+        Scotland, Wales and Northern Ireland, not divisions beside them."""
+        candidates = {1: {'iso_3166_2': ['GB-EAW']}, 2: {'iso_3166_2': ['GB-ENG']}}
+        self.assertEqual({2}, set(select_admin1s('GB', candidates, self.SETTLEMENT)))
+
+    def test_lithuanias_municipalities_lose_to_its_counties(self):
+        """ISO lists all 60 beside the 10 counties, and Wikidata does not
+        record them as contained in one, so root-most cannot separate them."""
+        candidates = {1: {'iso_3166_2': ['LT-01']}, 2: {'iso_3166_2': ['LT-AL']}}
+        self.assertEqual({2}, set(select_admin1s('LT', candidates, self.SETTLEMENT)))
+
+    def test_one_code_yields_one_division(self):
+        """Sevastopol and 'administrative and municipal division of Ukraine'
+        both claim UA-40. Shipping both puts one place under two ids; the
+        lower QID wins so a rebuild cannot flip which."""
+        candidates = {7525: {'iso_3166_2': ['UA-40']},
+                      4456205: {'iso_3166_2': ['UA-40']}}
+        self.assertEqual({7525}, set(select_admin1s('UA', candidates, self.SETTLEMENT)))
+
+    def test_an_excluded_qid_loses_even_at_the_lower_number(self):
+        """Lulua District has the lower QID but Kasai-Central is the province
+        that now holds CD-KC."""
+        candidates = {209706: {'iso_3166_2': ['CD-KC']},
+                      6702952: {'iso_3166_2': ['CD-KC']}}
+        self.assertEqual({6702952}, set(select_admin1s('CD', candidates, self.SETTLEMENT)))
