@@ -16,7 +16,7 @@ domain and already on the machine.
 
 import re
 
-from build import remove_accents
+from contracts import remove_accents
 from naming import alt_names_for, resolve_name
 
 TZDB_PATH = '/usr/share/zoneinfo/zone1970.tab'

@@ -17,10 +17,7 @@ import unicodedata
 from anyascii import anyascii
 from pypinyin import Style, lazy_pinyin
 
-# slugify() is published identity: it is in URLs and in the rows an install
-# matches on when it re-imports. Imported rather than reimplemented so the dump
-# pipeline and the SPARQL pipeline cannot drift.
-from build import slugify
+from contracts import slugify
 
 # --- romanisation -----------------------------------------------------------
 #

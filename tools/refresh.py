@@ -194,17 +194,7 @@ def stage_build(args, scan_dir):
 
 
 def stage_publish(args, build_dir):
-    # validate.py reads src/, so point it at the build for the duration. A
-    # symlink rather than a copy: this is 377 MB.
-    link = os.path.join(ROOT, 'src')
-    replaced = os.path.islink(link)
-    if replaced:
-        os.unlink(link)
-    os.symlink(os.path.abspath(build_dir), link)
-    try:
-        run([sys.executable, os.path.join(ROOT, 'validate.py')])
-    finally:
-        os.unlink(link)
+    run([sys.executable, os.path.join(ROOT, 'validate.py'), build_dir])
 
     publish = [sys.executable, os.path.join(ROOT, 'tools', 'publish.py')]
     run(publish + ['release', build_dir] + (['--dry-run'] if args.dry_run else []))

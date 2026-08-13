@@ -15,7 +15,7 @@ import json
 import os
 import re
 
-from build import COUNTRY_NAME_OVERRIDES, coord, mean_coord, remove_accents, slugify
+from contracts import COUNTRY_NAME_OVERRIDES, coord, mean_coord, remove_accents, slugify
 from classify import is_settlement
 from countryblock import country_extra, extra_fields, official_language, parse_point
 from naming import resolve_name, resolve_name_full

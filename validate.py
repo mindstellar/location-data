@@ -1,4 +1,4 @@
-"""Sanity-check a freshly built src/ against the one currently committed.
+"""Sanity-check a freshly built dataset against the one currently published.
 
 The refresh workflow runs unattended, so an upstream outage, a format change or a
 truncated download must not be able to publish a gutted dataset. This compares the
@@ -16,7 +16,7 @@ not a change to the threshold.
 Growth is never an error. Only losses are.
 
 Usage:
-    python validate.py                            compare against HEAD:src/json-list.json
+    python validate.py <build-dir>                compare against the published release
     python validate.py --baseline FILE             compare against a specific manifest
     python validate.py --per-country-baseline-ref REF   git ref for the per-country gate
 """
@@ -27,9 +27,18 @@ import os
 import subprocess
 import sys
 
-from build import slugify
+from contracts import slugify
 
-MANIFEST = 'src/json-list.json'
+# The build directory, set from argv. Every path below hangs off it: this used
+# to be the literal 'src/', which meant validating a build required symlinking
+# it into place first -- refresh.py created and removed that symlink around
+# every call purely to satisfy this.
+BUILD_DIR = 'src'
+MANIFEST_NAME = 'json-list.json'
+
+
+def manifest_path():
+    return os.path.join(BUILD_DIR, MANIFEST_NAME)
 
 # A country dropping out means every install that offered it loses its location
 # tree, so the bar is much tighter for countries than for individual cities.
@@ -99,7 +108,7 @@ def load_ref_manifest(ref):
     which is not guaranteed of whatever HEAD happens to be.
     """
     try:
-        blob = subprocess.check_output(['git', 'show', '%s:%s' % (ref, MANIFEST)],
+        blob = subprocess.check_output(['git', 'show', '%s:src/%s' % (ref, MANIFEST_NAME)],
                                        stderr=subprocess.DEVNULL)
     except subprocess.CalledProcessError:
         return None
@@ -182,7 +191,7 @@ def per_country_regression(new, baseline):
 MAX_MISSING_CAPITALS = 0.05
 
 
-def capital_presence(manifest, data_dir='src/data', json_dir='src/json'):
+def capital_presence(manifest, data_dir=None, json_dir=None):
     """(present, missing) over countries whose canonical record names a capital.
 
     The capital name comes from the canonical record, which carries the
@@ -195,6 +204,8 @@ def capital_presence(manifest, data_dir='src/data', json_dir='src/json'):
 
     Returns (0, []) when there is no canonical output to read.
     """
+    data_dir = data_dir if data_dir is not None else os.path.join(BUILD_DIR, 'data')
+    json_dir = json_dir if json_dir is not None else os.path.join(BUILD_DIR, 'json')
     if not os.path.isdir(data_dir):
         return 0, []
     by_code = {e['s_country_code']: e['s_file_name'] for e in manifest['locations']}
@@ -229,11 +240,11 @@ def capital_presence(manifest, data_dir='src/data', json_dir='src/json'):
 
 def coord_coverage():
     """Fraction of cities across all country files that carry a coordinate."""
-    with open(MANIFEST, encoding='utf-8') as handle:
+    with open(manifest_path(), encoding='utf-8') as handle:
         manifest = json.load(handle)
     total = missing = 0
     for entry in manifest['locations']:
-        with open('src/json/' + entry['s_file_name'], encoding='utf-8') as handle:
+        with open(os.path.join(BUILD_DIR, 'json', entry['s_file_name']), encoding='utf-8') as handle:
             country = json.load(handle)
         for region in country['regions']:
             for city in region['cities']:
@@ -245,13 +256,21 @@ def coord_coverage():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('build_dir', nargs='?', default='src',
+                        help='the build directory to check (default: src)')
     parser.add_argument('--baseline', default=BASELINE_DEFAULT,
                         help="what to compare against: 'r2' (the published "
                              "release, default), 'none', a manifest path, or a "
                              "git ref")
     args = parser.parse_args()
 
-    with open(MANIFEST, encoding='utf-8') as handle:
+    global BUILD_DIR
+    BUILD_DIR = args.build_dir
+    if not os.path.exists(manifest_path()):
+        sys.exit('%s has no %s -- is it a build directory?'
+                 % (BUILD_DIR, MANIFEST_NAME))
+
+    with open(manifest_path(), encoding='utf-8') as handle:
         new = json.load(handle)
 
     failures = []

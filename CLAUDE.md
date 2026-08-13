@@ -39,12 +39,9 @@ python dump_build.py --scan-dir dump-scan --countries FR,DE,JP   # iterate on a 
 python dump_build.py --scan-dir dump-scan --bucket-dir /tmp/b    # keep the grouped
                                                                  # settlements to read
 
-# SPARQL pipeline (superseded, useful as a cross-check on a few countries)
-python build_wikidata.py --countries AL,IN,DE --keep-going
-
-python validate.py                              # vs the published release (needs R2 creds)
-python validate.py --baseline none              # first build, or offline
-python validate.py --baseline path/to/previous/json-list.json
+python validate.py <build-dir>                  # vs the published release (needs R2 creds)
+python validate.py <build-dir> --baseline none   # first build, or offline
+python validate.py <build-dir> --baseline path/to/previous/json-list.json
 
 # checks, in ascending order of cost and confidence
 python -m unittest discover -s tests            # ~1 s, no scan needed
@@ -86,6 +83,8 @@ isolation. Kosovo does not, because Serbia claims its divisions.
 a rule can be found by what it decides:
 
 ```
+contracts.py    slugify, COUNTRY_NAME_OVERRIDES, coordinate precision -- published
+                identity, frozen, and the reason it has its own module
 classify.py     the subclass closures, the three kinds of exclusion, is_settlement
 contain.py      P131 propagation, the four division tiers, CountryPlan
 naming.py       resolve_name and what makes a label usable at all
@@ -181,7 +180,7 @@ Published identity that consumers have already stored. Adding is safe; changing
 an existing value is a migration for everyone:
 
 - **`slugify()`** — in URLs and in the rows a consumer matches on when
-  re-importing. Both pipelines import it from `build.py` so they cannot drift.
+  re-importing. It lives in `contracts.py` with the rest of the frozen values.
   Do not reimplement it.
 - **`COUNTRY_NAME_OVERRIDES`** — each entry pins a spelling already shipped.
   Additive only.

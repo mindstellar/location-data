@@ -48,9 +48,7 @@ ISO 3166-1 code rather than read from anywhere. Nothing here adds an obligation.
 
 ## How the data is built
 
-There are two paths to the same canonical output.
-
-### The dump pipeline (current)
+### How it runs
 
 ```bash
 zcat latest-truthy.nt.gz | python dump_scan.py --out-dir dump-scan
@@ -72,22 +70,10 @@ cannot happen until the pass is over.
 Budget on a 4-core machine: ~50 minutes to download the dump, ~90 minutes to
 scan, ~5 minutes to build. `tools/refresh.py` runs all of it, resumably.
 
-### The SPARQL pipeline (superseded)
-
-```bash
-python build_wikidata.py --countries AL,IN,DE --keep-going
-```
-
-Kept because it is a useful cross-check on a handful of countries, and because
-its query design documents the semantics the dump pipeline had to reproduce. It
-cannot build the whole world: the endpoint cancels an expensive query at its
-deadline and reports it as HTTP 429, so "too expensive" and "slow down" are
-indistinguishable from the client side, and the largest countries never finish.
-
 ### Validation
 
 ```bash
-python validate.py --baseline path/to/previous/json-list.json
+python validate.py <build-dir>
 ```
 
 Fails on loss, never on growth. The check that matters is per-country: the
@@ -133,7 +119,8 @@ Three things are published identity that consumers store. Adding is safe;
 changing an existing value is a migration for everyone:
 
 - **`slugify()`** — in URLs and in the rows a consumer matches on when
-  re-importing. Both pipelines import it from one place so they cannot drift.
+  re-importing. It lives in `contracts.py`, alone, so that changing it is a
+  deliberate act rather than an edit to a file that does other things.
 - **`COUNTRY_NAME_OVERRIDES`** — each entry pins a spelling already shipped.
 - **the upstream entity id** — the identity a re-import matches on, so a rename
   upstream becomes an in-place rename rather than a delete plus an insert.
