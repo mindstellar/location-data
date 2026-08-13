@@ -137,15 +137,39 @@ Two things about the edge that are not obvious and both cost time to find.
 was first cached while it still inherited the 30-day rule, so after the rules
 were fixed the edge kept serving a three-hour-old pointer with `age: 10459` and
 `cache-control: max-age=60` side by side. New entries honour the new rule;
-existing ones do not. After changing a rule, or after republishing a version
-with `--force`, purge explicitly:
+existing ones do not.
+
+`tools/publish.py` now purges as part of every release, and refuses to publish
+at all if it cannot -- a release that lands in the bucket while the edge keeps
+serving the previous one is a release whose manifest sha256 does not match what
+anyone receives. Two variables make it work, in `.env` beside the R2 ones:
 
 ```
-POST /zones/<zone>/purge_cache   {"files": ["https://geo.mindstellar.com/releases/latest.json"]}
+CF_API_TOKEN    a token with Zone.Cache Purge, scoped to this zone alone
+CF_ZONE_ID      the zone geo.mindstellar.com belongs to
 ```
 
-An ordinary publish needs no purge: it writes a new version prefix, and the
-pointer's own 60-second TTL carries it.
+Create the token under **Manage Account -> API Tokens** with the "Purge Cache"
+template. It is not the R2 token and cannot be substituted for it.
+
+What gets purged depends on what was written. An ordinary publish writes a new
+version prefix the edge has never seen, so only the pointer and the new
+manifest are cleared -- without that the pointer's own 60-second TTL would
+carry it, a minute later. A `--force` republish overwrites paths the edge is
+holding for 30 days and nothing expires them, so the whole host is purged:
+
+```
+POST /zones/<zone>/purge_cache   {"hosts": ["geo.mindstellar.com"]}
+```
+
+By hostname rather than `purge_everything`, which would throw away the cache of
+every other site in the `mindstellar.com` zone. Every purge method became
+available on all Cloudflare plans in April 2025, so this works on the Free plan
+this zone is on. `--no-purge` skips it, and is only correct for a bucket with
+no CDN in front of it.
+
+After changing a cache rule, purge by hand -- publish only purges what it
+wrote, and a rule change affects everything already cached.
 
 **The zone's security settings blocked a legitimate client.** Browser Integrity
 Check returned 403 to `Python-urllib/3.11` — not the WAF, not Bot Fight Mode,

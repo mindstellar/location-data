@@ -137,6 +137,32 @@ Two things this depends on, both of which were wrong once:
   reaches the departement and its region at the same depth, so the tie would
   break on QID and scatter settlements between two levels.
 
+## One name, one place inside a region
+
+Two settlements in one region can share a name for two opposite reasons, and
+`resolve_collisions` in `emit.py` separates them by distance.
+
+Wikidata routinely holds the administrative unit and the built-up place at its
+seat as **separate items** -- "comune of Italy" beside "municipality seat",
+"municipality of Colombia" beside "human settlement". Both pass the settlement
+test, so both used to ship: 248,712 rows shared a name with another row in the
+same region. Within 2 km they are merged, lowest QID surviving and absorbing
+the other's fields, because upstream fills the pair differently -- the
+administrative item tends to carry area and population, the settlement item the
+GeoNames id.
+
+Beyond 2 km they are different places. Germany has two towns called Aach 80 km
+apart, and Colombia and Guatemala were each about a third duplicates. Those are
+kept, and their names qualified with the P131 parent: `Aach (Konstanz)`.
+
+- **The largest of a group keeps the bare name.** Qualifying every row renamed
+  the capital of Colombia, because a village of 61,549 called Bogota sits in
+  the same region -- and the same for Vilnius. Both then failed the
+  contains-its-own-capital check, which is exactly what that check is for.
+- **A qualifier that does not qualify is not used.** Where two rows share a
+  parent, or the parent is named after the place, the bare name is left and
+  counted in `ambiguous_names`.
+
 ## Traps that have already been hit
 
 Each of these cost real time and will look like a fresh idea to anyone who
@@ -187,6 +213,15 @@ hasn't seen them:
   date.
 - **Shard files are opened for append**, so rerunning a scan into a directory
   that already has output silently doubles it.
+- **A scan predating a property extraction produces a build that looks fine.**
+  The country-level properties -- capital, currency, continent, calling code,
+  demonym, ISO alpha-3 -- were added to `dump_scan.py` after an early scan was
+  taken, and building from that scan emitted 255 countries whose country block
+  was entirely null. Counts, coordinates and per-country regressions all
+  passed, and `capital_presence` skips a country that names no capital, so with
+  every capital gone it reported nothing at all. `capital_naming` in
+  `validate.py` is the floor that now catches it. Check that a scan directory
+  is the one a release was built from before building from it.
 
 ## Determinism is load-bearing
 
@@ -211,8 +246,10 @@ an existing value is a migration for everyone:
 
 ## Validation thresholds
 
-`validate.py` fails on loss, never on growth. It compares against **the
-published release** by default, and without R2 credentials it exits non-zero
+`validate.py` fails on loss, never on growth. The country block is checked
+separately from everything else, because it is read from one place for every
+country at once and so fails all-or-nothing rather than country by country.
+It compares against **the published release** by default, and without R2 credentials it exits non-zero
 rather than skipping — a gate that disables itself when it cannot reach its
 baseline is worse than no gate, and that is not hypothetical: the default used
 to be a git ref in a repository that no longer existed, so both regression

@@ -251,6 +251,43 @@ def capital_presence(manifest, data_dir=None, json_dir=None):
     return present, missing
 
 
+# The country block -- capital, currency, continent, calling code, demonym,
+# ISO alpha-3 -- is read from one place for every country at once, so it fails
+# all-or-nothing rather than country by country. A build off a scan taken
+# before those properties were extracted emits 255 countries whose block is
+# entirely null, and nothing else here notices: the counts are right, the
+# coordinates are right, and capital_presence skips a country that names no
+# capital, so with every capital gone it reported nothing at all and the run
+# passed. This is the floor that catches that.
+#
+# 242 of 255 countries name a capital; the ones that do not are uninhabited
+# territories like Bouvet Island and Clipperton.
+MIN_COUNTRIES_WITH_A_CAPITAL = 0.80
+
+
+def capital_naming(data_dir=None):
+    """(named, unnamed) over every country file -- whether the country-level
+    block carries a capital at all, which is a different question from whether
+    that capital is present in the data."""
+    data_dir = data_dir if data_dir is not None else os.path.join(BUILD_DIR, 'data')
+    if not os.path.isdir(data_dir):
+        return 0, 0
+    named = unnamed = 0
+    for name in sorted(os.listdir(data_dir)):
+        if not name.endswith('.ndjson'):
+            continue
+        with open(os.path.join(data_dir, name), encoding='utf-8') as handle:
+            first = handle.readline()
+        row = json.loads(first) if first else {}
+        if row.get('type') != 'country':
+            continue
+        if row.get('capital_name'):
+            named += 1
+        else:
+            unnamed += 1
+    return named, unnamed
+
+
 def coord_coverage():
     """Fraction of cities across all country files that carry a coordinate."""
     with open(manifest_path(), encoding='utf-8') as handle:
@@ -320,6 +357,16 @@ def main():
             if (old_cities - new_cities) / old_cities > MAX_CITY_LOSS:
                 failures.append('city count fell by more than %.0f%%'
                                 % (100 * MAX_CITY_LOSS))
+
+    named, unnamed = capital_naming()
+    if named or unnamed:
+        rate = named / (named + unnamed)
+        print('country blocks: %d of %d name a capital (%.1f%%)'
+              % (named, named + unnamed, 100 * rate))
+        if rate < MIN_COUNTRIES_WITH_A_CAPITAL:
+            failures.append('only %d of %d countries carry a country-level block; '
+                            'the scan is missing the country properties'
+                            % (named, named + unnamed))
 
     present, missing_capitals = capital_presence(new)
     if present or missing_capitals:

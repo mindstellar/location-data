@@ -570,6 +570,35 @@ def main():
         for stale in os.listdir(directory):
             os.remove(os.path.join(directory, stale))
 
+    # The division directly below the region, for every settlement that has
+    # one. It is what tells two same-named places in one region apart. The
+    # buckets are read rather than the passes above hooked, because both of
+    # them feed the buckets and this is the one point that sees the final set.
+    admin2_wanted = set()
+    for iso2 in wanted:
+        path = os.path.join(bucket_dir, '%s.jsonl' % iso2)
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding='utf-8') as handle:
+            for line in handle:
+                located = json.loads(line).get('located_in') or []
+                if located and located[0].startswith('Q'):
+                    admin2_wanted.add(int(located[0][1:]))
+
+    admin2_records = {q: admin1_candidates[q] for q in admin2_wanted
+                      if q in admin1_candidates}
+    missing = admin2_wanted - set(admin2_records)
+    if missing:
+        print('resolving %d admin-2 names...' % len(missing), flush=True)
+        for name in sorted(os.listdir(entities_dir)):
+            if not name.endswith('.jsonl'):
+                continue
+            with open(os.path.join(entities_dir, name), encoding='utf-8') as handle:
+                for line in handle:
+                    record = json.loads(line)
+                    if record['id'] in missing:
+                        admin2_records[record['id']] = record
+
     print('building countries...', flush=True)
     summary = []
     neutral = []
@@ -583,6 +612,7 @@ def main():
         # this counts is what build_country could genuinely not place.
         stats = {'orphan': 0, 'no_label': 0, 'no_coord': 0,
                  'empty_regions': 0, 'region_no_label': 0, 'coarse_regions': 0,
+                 'merged_duplicates': 0, 'ambiguous_names': 0,
                  'settlements_seen': seen_counts.get(iso2, 0), 'native_lang': ''}
         country = build_country(
             iso2, plan.country_qid,
@@ -590,7 +620,8 @@ def main():
             plan.leaf, admin1_candidates, assign,
             settlement_classes, lang_codes, country_records, stats,
             mode=plan.mode, refs=refs, single_zone=single_zone,
-            exclude_classes=exclude_classes, coarse=plan.coarse)
+            exclude_classes=exclude_classes, coarse=plan.coarse,
+            admin2_records=admin2_records)
 
         data_filename, data_digest, data_bytes = write_canonical_ndjson(country, data_dir)
         json_filename, json_digest, json_bytes = write_country_json(country, json_dir)
@@ -630,11 +661,15 @@ def main():
             'no_division': orphans.get(iso2, 0),
             'no_label': stats['no_label'], 'no_coord': stats['no_coord'],
             'empty_regions': stats['empty_regions'], 'native_lang': stats['native_lang'],
+            'merged_duplicates': stats['merged_duplicates'],
+            'ambiguous_names': stats['ambiguous_names'],
             'tier': plan.tier,
         })
-        print('%-4s %-38s %5d regions %8d cities   (seen %d, orphan %d, no_label %d, no_coord %d)'
+        print('%-4s %-38s %5d regions %8d cities   (seen %d, orphan %d, no_label %d, '
+              'no_coord %d, merged %d, ambiguous %d)'
               % (iso2, country['name'][:38], len(country['regions']), cities,
-                 seen, stats['orphan'], stats['no_label'], stats['no_coord']), flush=True)
+                 seen, stats['orphan'], stats['no_label'], stats['no_coord'],
+                 stats['merged_duplicates'], stats['ambiguous_names']), flush=True)
 
     # The manifest a consumer reads first. Sorted by country name and
     # fingerprinted from the per-file hashes rather than the clock, so two runs

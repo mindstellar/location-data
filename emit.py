@@ -15,9 +15,11 @@ empty list -- and `write_canonical_ndjson` streams it.
 The consumer-specific formats are not written here. They are generated from the
 """
 
+import collections
 import csv
 import hashlib
 import json
+import math
 import os
 import re
 
@@ -35,11 +37,176 @@ from classify import is_settlement
 from countryblock import country_extra, extra_fields, official_language, parse_point
 from naming import resolve_name, resolve_name_full
 
+# Two settlements in one region carry the same name for two opposite reasons.
+#
+# Wikidata routinely holds the administrative unit and the built-up place at
+# its seat as separate items: "comune of Italy" beside "municipality seat",
+# "municipality of Spain" beside "human settlement", "commune of France"
+# beside "human settlement". Both pass the settlement test, so both shipped,
+# and the pair is one place described twice.
+#
+# Genuinely different places also share a name -- Germany has two towns called
+# Aach, 80 km apart, and Russia two villages called Chekhrak, 25 km apart.
+#
+# Distance is what separates the two cases. Within this radius the rows are
+# treated as one place and merged; beyond it both are kept, because deleting
+# one would delete a real village. 2 km is wide enough to cover an item pair
+# whose coordinates disagree by a town's width and far narrower than the gap
+# between two settlements that merely share a name.
+MERGE_KM = 2.0
+
+
+def _distance_km(first, second):
+    """Great-circle distance between two settlement rows."""
+    lat1, lng1 = math.radians(float(first['latitude'])), math.radians(float(first['longitude']))
+    lat2, lng2 = math.radians(float(second['latitude'])), math.radians(float(second['longitude']))
+    half = (math.sin((lat2 - lat1) / 2) ** 2
+            + math.cos(lat1) * math.cos(lat2) * math.sin((lng2 - lng1) / 2) ** 2)
+    return 2 * 6371.0 * math.asin(math.sqrt(half))
+
+
+# Set by the row itself and never taken from a row it is merged with: an id
+# identifies one upstream item, and the name, slug and position are the
+# identity the merge is keeping.
+_IDENTITY_FIELDS = frozenset(
+    ('id', 'source', 'admin1_id', 'country_code', 'name', 'name_lang', 'slug',
+     'latitude', 'longitude'))
+
+
+def _absorb(base, other):
+    """Fill base's empty fields from other, in place.
+
+    The two items describe the same place, and upstream rarely fills both the
+    same way -- the administrative item tends to carry area and population, the
+    settlement item the GeoNames id and the postal code. Dropping one row
+    without taking its fields would lose data the dataset already had.
+    """
+    for key, value in other.items():
+        if key in _IDENTITY_FIELDS:
+            continue
+        if key == 'alt_names':
+            names = base.get(key) or {}
+            for lang, values in (value or {}).items():
+                names[lang] = sorted(set(names.get(lang, [])) | set(values))
+            base[key] = names
+            continue
+        if key == 'native_label':
+            base[key] = sorted(set(base.get(key) or []) | set(value or []))
+            continue
+        current = base.get(key)
+        if current is None or current == '' or current == [] or current == {}:
+            base[key] = value
+
+
+def _merge_colocated(rows):
+    """Single-link clustering of same-named rows by distance.
+
+    Single-link rather than pairwise: three items for one place can be strung
+    out so that the first and last are further apart than the threshold while
+    each is close to the middle one. Sorted by id first, so the surviving row
+    is the lowest QID -- the same tiebreak the country and division indexes
+    use, which is what keeps a rebuild from flipping which id a place has.
+    """
+    rows = sorted(rows, key=lambda row: row['id'])
+    parent = list(range(len(rows)))
+
+    def find(index):
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    for i in range(len(rows)):
+        for j in range(i + 1, len(rows)):
+            if _distance_km(rows[i], rows[j]) <= MERGE_KM:
+                left, right = find(i), find(j)
+                if left != right:
+                    parent[left] = right
+
+    clusters = collections.OrderedDict()
+    for index, row in enumerate(rows):
+        clusters.setdefault(find(index), []).append(row)
+    merged = []
+    for cluster in clusters.values():
+        base = cluster[0]
+        for other in cluster[1:]:
+            _absorb(base, other)
+        merged.append(base)
+    return merged
+
+
+def _qualify(rows, admin2_name, stats):
+    """Name the division below the region, so two places that really do share
+    a name in one region can be told apart.
+
+    "Aach" and "Aach" in Baden-Wurttemberg are indistinguishable in a list;
+    "Aach" and "Aach (Konstanz)" are not. The qualifier is the P131 parent --
+    the district or municipality -- which is how Wikidata disambiguates these
+    itself.
+
+    The largest of the group keeps the bare name. Qualifying every row instead
+    reads well until it reaches a place anyone has heard of: Colombia has a
+    village of 61,549 called Bogota in the same region as the capital, and
+    Lithuania a hamlet called Vilnius, and qualifying all of them renamed
+    "Bogota" to "Bogota (Cundinamarca Department)" and "Vilnius" to "Vilnius
+    (Vilnius City Municipality)". Both then failed the check that a country
+    contains its own capital, which is exactly what that check is for. A bare
+    name is the answer to "which place does this name usually mean"; the
+    qualifiers answer "where is the other one".
+
+    Population decides, lowest QID breaking ties, so a rebuild cannot flip
+    which row keeps the plain name.
+
+    A row is qualified only when its parent has a name that no other row in the
+    group shares, so the qualifier always distinguishes. Where it cannot, the
+    bare name is left and counted: a qualifier that does not qualify is noise,
+    and a wrong one is worse than none.
+    """
+    primary = min(rows, key=lambda row: (-(row.get('population') or -1), row['id']))
+    labels = []
+    for row in rows:
+        reference = row.get('admin2_id')
+        label = admin2_name(int(reference[1:])) if reference else None
+        labels.append(label if label and label != row['name'] else None)
+    counts = collections.Counter(label for label in labels if label)
+    for row, label in zip(rows, labels):
+        if row is primary:
+            continue
+        if label is None or counts[label] > 1:
+            stats['ambiguous_names'] += 1
+            continue
+        row['name'] = '%s (%s)' % (row['name'], label)
+        row['slug'] = slugify(row['name'])
+
+
+def resolve_collisions(settlements, admin2_name, stats):
+    """One name, one place, inside a region.
+
+    Same name and effectively the same position means one place upstream
+    described twice, and those are merged. Same name and a real distance apart
+    means two places, and those are kept and qualified.
+    """
+    groups = collections.OrderedDict()
+    for settlement in settlements:
+        groups.setdefault(settlement['slug'], []).append(settlement)
+
+    resolved = []
+    for rows in groups.values():
+        if len(rows) == 1:
+            resolved.extend(rows)
+            continue
+        merged = _merge_colocated(rows)
+        stats['merged_duplicates'] += len(rows) - len(merged)
+        if len(merged) > 1:
+            _qualify(merged, admin2_name, stats)
+        resolved.extend(merged)
+    return resolved
+
 
 def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_records,
                   assign, settlement_classes, lang_codes, country_records, stats,
                   mode='admin1', refs=None, single_zone=None, exclude_classes=None,
-                  coarse=None):
+                  coarse=None, admin2_records=None):
     """One country's canonical record, in the shape build_canonical_country()
     produces: neutral field names, nothing synthesised, and a region with no
     settlements is simply a region with an empty list.
@@ -132,6 +299,22 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
                                                (name_lang, romanised_from) if romanised_from else None))
                 by_region[admin1_qid].append(settlement)
 
+    # Resolved lazily and only for a region that actually has a collision:
+    # 148,000 divisions carry an admin-2 name and a few thousand are ever
+    # needed to tell two rows apart.
+    admin2_records = admin2_records or {}
+    admin2_cache = {}
+
+    def admin2_name(qid):
+        if qid not in admin2_cache:
+            record = admin2_records.get(qid)
+            name, _lang = resolve_name(record, native_lang) if record else (None, None)
+            admin2_cache[qid] = (remove_accents(name).strip() or None) if name else None
+        return admin2_cache[qid]
+
+    for admin1_qid in list(by_region):
+        by_region[admin1_qid] = resolve_collisions(by_region[admin1_qid],
+                                                   admin2_name, stats)
 
     regions = []
     emit = dict(admin1_selected)

@@ -160,12 +160,25 @@ REGION_EXCLUDE_CODES = frozenset(
     | {'LT-%02d' % n for n in range(1, 61)}
 )
 
-# Whole division types that no longer exist and that Wikidata does not mark
-# with an end date. Excluding the class rather than listing codes catches the
+# Whole division types that are not first-level divisions of the country they
+# get selected for. Excluding the class rather than listing codes catches the
 # ones nobody has noticed yet: Greece was shipping five abolished prefectures
 # and only three were obvious enough to spot by hand.
 REGION_EXCLUDE_CLASSES = frozenset({
     202595,     # prefecture of Greece -- all 51 abolished by Kallikratis, 2011
+    # The French overseas territories have no ISO 3166-2 code of their own, so
+    # their divisions come from tier 2 -- every administrative P131 child of the
+    # territory -- and that reaches three parallel tiers at once. The communes
+    # are the one that holds settlements; the other two shipped 97 regions
+    # between them with nothing in any of them.
+    18524218,   # canton of France -- an electoral constituency, not a place.
+                # Its items are not even named as places: "canton of
+                # Saint-Denis-1", "canton of Le Tampon-2".
+    194203,     # arrondissement of France -- a real division, but it sits
+                # above the communes rather than beside them, so selecting both
+                # partitions the territory twice and settlements attach to the
+                # commune. Mainland France is unaffected: it has FR- codes and
+                # never reaches tier 2.
 })
 
 # Same idea where two items share one code and the lower QID is the wrong one.
@@ -284,8 +297,13 @@ def select_admin1s_under_country(country_qid, country_children, records,
             continue
         if is_not_a_place(record, not_a_place):
             continue
-        for cls in record.get('instance_of', ()):
-            if cls.startswith('Q') and int(cls[1:]) in admin_classes:
+        if child in REGION_EXCLUDE_QIDS:
+            continue
+        classes = [int(c[1:]) for c in record.get('instance_of', ()) if c.startswith('Q')]
+        if set(classes) & REGION_EXCLUDE_CLASSES:
+            continue
+        for cls in classes:
+            if cls in admin_classes:
                 selected[child] = None
                 break
     return selected

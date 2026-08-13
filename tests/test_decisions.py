@@ -36,7 +36,9 @@ from contain import (  # noqa: E402
     select_admin1s_under_country,
     select_admin1s_with_dissolved,
 )
+from contracts import coord, slugify  # noqa: E402
 from countryblock import extra_fields  # noqa: E402
+from emit import resolve_collisions  # noqa: E402
 from naming import resolve_name_full, romanise  # noqa: E402
 from validate import (  # noqa: E402
     BASELINE_DEFAULT,
@@ -662,3 +664,127 @@ class HandMaintainedRegionOverrides(unittest.TestCase):
         candidates = {209706: {'iso_3166_2': ['CD-KC']},
                       6702952: {'iso_3166_2': ['CD-KC']}}
         self.assertEqual({6702952}, set(select_admin1s('CD', candidates, self.SETTLEMENT)))
+
+
+class OneNameOnePlaceInARegion(unittest.TestCase):
+    """Wikidata holds the administrative unit and the place at its seat as
+    separate items, and it also holds genuinely different places that share a
+    name. Distance is what tells the two apart."""
+
+    @staticmethod
+    def row(qid, name, lat, lng, admin2=None, **extra):
+        settlement = {'id': qid, 'source': 'wikidata', 'admin1_id': 1,
+                      'country_code': 'XX', 'name': name, 'name_lang': 'en',
+                      'slug': slugify(name), 'latitude': coord(lat),
+                      'longitude': coord(lng), 'admin2_id': admin2,
+                      'population': None, 'geonames_id': None,
+                      'alt_names': {}, 'native_label': []}
+        settlement.update(extra)
+        return settlement
+
+    @staticmethod
+    def stats():
+        return {'merged_duplicates': 0, 'ambiguous_names': 0}
+
+    def test_the_same_place_twice_becomes_one_row(self):
+        """A comune and the town at its seat sit on top of each other."""
+        rows = [self.row(747074, 'Aalen', 48.837222, 10.093611),
+                self.row(31868047, 'Aalen', 48.837840, 10.092990)]
+        stats = self.stats()
+        out = resolve_collisions(rows, lambda q: None, stats)
+        self.assertEqual([747074], [s['id'] for s in out])
+        self.assertEqual(1, stats['merged_duplicates'])
+
+    def test_the_surviving_row_takes_the_fields_the_other_had(self):
+        """The administrative item carries the population, the settlement item
+        the GeoNames id. Dropping either without absorbing it loses data."""
+        rows = [self.row(100, 'Abla', 37.142222, -2.777222, population=None,
+                         geonames_id=2521886),
+                self.row(200, 'Abla', 37.142567, -2.777509, population=1421,
+                         geonames_id=None)]
+        out = resolve_collisions(rows, lambda q: None, self.stats())
+        self.assertEqual(1, len(out))
+        self.assertEqual(1421, out[0]['population'])
+        self.assertEqual(2521886, out[0]['geonames_id'])
+
+    def test_two_real_places_are_both_kept_and_qualified(self):
+        """Germany has two towns called Aach, 80 km apart. Neither is a
+        duplicate of the other, and a list showing 'Aach' twice is useless."""
+        rows = [self.row(1, 'Aach', 48.467500, 8.478611, admin2='Q7167'),
+                self.row(2, 'Aach', 47.842500, 8.853889, admin2='Q7169')]
+        stats = self.stats()
+        out = resolve_collisions(rows, {7167: 'Zollernalbkreis',
+                                        7169: 'Konstanz'}.get, stats)
+        self.assertEqual(0, stats['merged_duplicates'])
+        self.assertEqual(['Aach', 'Aach (Konstanz)'], [s['name'] for s in out])
+        self.assertEqual('aach-konstanz', out[1]['slug'])
+
+    def test_a_qualifier_that_does_not_qualify_is_not_used(self):
+        """Two rows under the same parent would both read 'Sarna (Kutina)',
+        which distinguishes nothing. The bare name is left and counted."""
+        rows = [self.row(1, 'Sarna', 45.0, 16.0, admin2='Q900'),
+                self.row(2, 'Sarna', 45.2, 16.3, admin2='Q900')]
+        stats = self.stats()
+        out = resolve_collisions(rows, {900: 'Kutina'}.get, stats)
+        self.assertEqual(['Sarna', 'Sarna'], [s['name'] for s in out])
+        self.assertEqual(1, stats['ambiguous_names'])
+
+    def test_a_parent_named_after_the_place_is_not_a_qualifier(self):
+        """'Aach (Aach)' says nothing."""
+        rows = [self.row(1, 'Aach', 48.4675, 8.478611, admin2='Q1'),
+                self.row(2, 'Aach', 47.8425, 8.853889, admin2='Q2')]
+        stats = self.stats()
+        out = resolve_collisions(rows, {1: 'Aach', 2: 'Konstanz'}.get, stats)
+        self.assertEqual(['Aach', 'Aach (Konstanz)'], [s['name'] for s in out])
+        self.assertEqual(0, stats['ambiguous_names'])
+
+    def test_three_items_strung_out_still_collapse_to_one(self):
+        """Single-link, not pairwise: the outer two are 3 km apart and would
+        survive a pairwise test even though each is 1.5 km from the middle."""
+        rows = [self.row(3, 'Ourem', 39.6500, -8.5800),
+                self.row(1, 'Ourem', 39.6635, -8.5800),
+                self.row(2, 'Ourem', 39.6770, -8.5800)]
+        stats = self.stats()
+        out = resolve_collisions(rows, lambda q: None, stats)
+        self.assertEqual([1], [s['id'] for s in out])
+        self.assertEqual(2, stats['merged_duplicates'])
+
+    def test_the_biggest_place_keeps_the_plain_name(self):
+        """Colombia has a village of 61,549 called Bogota in the same region as
+        the capital. Qualifying both renames the capital."""
+        rows = [self.row(1093182, 'Bogota', 5.05, -74.0, admin2='Q1', population=61549),
+                self.row(2841, 'Bogota', 4.61, -74.08, admin2='Q2', population=8034649)]
+        out = resolve_collisions(rows, {1: 'Central Savanna', 2: 'Cundinamarca'}.get,
+                                 self.stats())
+        self.assertEqual(['Bogota', 'Bogota (Central Savanna)'],
+                         [s['name'] for s in out])
+
+    def test_different_names_are_never_touched(self):
+        rows = [self.row(1, 'Aach', 48.4675, 8.478611),
+                self.row(2, 'Aalen', 48.4675, 8.478611)]
+        stats = self.stats()
+        out = resolve_collisions(rows, lambda q: None, stats)
+        self.assertEqual(2, len(out))
+        self.assertEqual(0, stats['merged_duplicates'])
+
+
+class TierTwoHonoursTheExcludedClasses(unittest.TestCase):
+    """A territory with no ISO code of its own takes every administrative P131
+    child of itself, which reaches parallel tiers that are not divisions of it.
+    Reunion took its 24 communes, its 4 arrondissements and its 25 cantons."""
+
+    ADMIN = {484170, 194203, 18524218}
+
+    def selected(self, records):
+        return set(select_admin1s_under_country(17070, {17070: list(records)},
+                                                records, self.ADMIN))
+
+    def test_a_commune_is_the_division_that_survives(self):
+        records = {1: {'instance_of': ['Q484170']},        # commune of France
+                   2: {'instance_of': ['Q18524218']},      # canton -- electoral
+                   3: {'instance_of': ['Q194203']}}        # arrondissement
+        self.assertEqual({1}, self.selected(records))
+
+    def test_an_ordinary_administrative_child_is_still_taken(self):
+        records = {1: {'instance_of': ['Q484170']}, 2: {'instance_of': ['Q484170']}}
+        self.assertEqual({1, 2}, self.selected(records))

@@ -14,8 +14,8 @@ outside single-zone countries. Those three have specific causes, given below.
 | | |
 |---|---:|
 | countries | 255 |
-| administrative divisions | 4,401 |
-| settlements | 1,745,358 |
+| administrative divisions | 4,329 |
+| settlements | 1,702,072 |
 | with coordinates | 100% |
 
 Every row is a place Wikidata records. Nothing is synthesised to round the
@@ -49,14 +49,14 @@ Per settlement:
 |---|---:|
 | name, slug, latitude, longitude, place_type, country_code, source | 100% |
 | admin2_id | 98.3% |
-| timezone_id | 46.6% |
-| geonames_id | 45.1% |
-| population | 41.7% |
-| alt_names | 36.8% |
-| postal_code | 31.4% |
+| timezone_id | 46.4% |
+| geonames_id | 44.5% |
+| population | 41.8% |
+| alt_names | 37.5% |
+| postal_code | 31.9% |
 | elevation | 29.1% |
-| area | 16.4% |
-| osm_relation_id | 13.2% |
+| area | 16.6% |
+| osm_relation_id | 13.3% |
 | native_label | 6.2% |
 | sitelinks | 0% |
 
@@ -113,6 +113,36 @@ What remains, and is upstream rather than fixable here: **Vietnam** ships 35
 against 63 provinces, because Wikidata files its subdivision classes beneath
 "former subdivisions of Vietnam"; **Kenya** ships 43 against 47 counties.
 
+## One name, one place
+
+A region used to be able to contain the same name twice, 248,712 times over.
+Two different things caused it and they are treated differently.
+
+Wikidata often holds the **administrative unit and the built-up place at its
+seat as separate items** -- "comune of Italy" beside "municipality seat",
+"municipality of Colombia" beside "human settlement". Where two rows in one
+region share a name and sit within 2 km of each other they are now one row,
+keeping the lower id and absorbing the other's fields, because upstream fills
+the pair differently. That merged 43,285 rows. Colombia and Guatemala were each
+about a third duplicates this way; most countries were a few percent.
+
+Beyond 2 km they are genuinely different places -- Germany has two towns called
+Aach 80 km apart, Russia two villages called Chekhrak 25 km apart -- and
+deleting one would delete a real place. Those are kept, and **their names are
+qualified with the division below the region**: `Aach (Konstanz)`. 213,381
+names (12.5%) carry such a qualifier.
+
+The largest of a group keeps the plain name, because a village of 61,549 called
+Bogota shares a region with the capital, and qualifying both would rename
+Bogota. So a plain name answers "which place does this name usually mean" and a
+qualifier answers "where is the other one".
+
+**12,784 rows (0.75%) still share a name with another row in the same region**,
+down from 248,712. They are the cases where the qualifier would not qualify:
+both rows have the same parent, or upstream records no parent for one of them.
+Mexico, Russia and Romania account for a third. If you need a unique label,
+`admin2_id` plus `name` is unique for nearly all of them, and the id always is.
+
 ## The three real gaps
 
 ### Settlements with no coordinates are dropped — 883,194 of them
@@ -149,7 +179,7 @@ romanisations, which is again NGA GNS.
 Where a name *was* transliterated, the original script is kept in `alt_names`
 under its own language code, so nothing is lost.
 
-### Timezone is 46.6%
+### Timezone is 46.4%
 
 From the IANA time zone database, which is public domain, and which resolves
 only countries that have exactly one zone — 214 of 247. Multi-zone countries
@@ -209,7 +239,7 @@ defect an earlier release caused in a consumer that matched on the id alone.
   towns, provincial cities and urban districts beneath "former subdivisions of
   Vietnam". Excluding what upstream marks as former is correct, so this should
   recover on its own as Wikidata reclassifies.
-- **1,618 names are longer than 60 characters** (0.09%), the longest being a
+- **1,833 names are longer than 60 characters** (0.11%), the longest being a
   249-character German housing-estate address. Truncate if your schema needs
   to.
 - **Names are accent-folded.** `name` is ASCII; the unfolded form is not

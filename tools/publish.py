@@ -42,6 +42,7 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import cdn  # noqa: E402
 import r2  # noqa: E402
 
 CC0 = """This data is dedicated to the public domain under CC0 1.0 Universal.
@@ -108,6 +109,15 @@ def publish_release(args):
         sys.exit('%s already exists. Pass --force to overwrite it, or use a '
                  'different --version.' % prefix)
 
+    # Checked before a byte is uploaded rather than after. A release that lands
+    # in the bucket and then cannot purge leaves the edge serving bytes that no
+    # longer match the manifest, and the only way back is to notice.
+    if not args.no_purge and not cdn.configured():
+        sys.exit('CF_API_TOKEN and CF_ZONE_ID are not set, so the CDN cannot be '
+                 'purged and the edge would keep serving the previous release. '
+                 'Set them in .env (see .env.example) or pass --no-purge if this '
+                 'bucket has no CDN in front of it.')
+
     files = collect(build_dir)
     total = sum(os.path.getsize(p) for p, _ in files)
     print('publishing %s -> r2://%s/%s' % (build_dir, r2.BUCKET, prefix))
@@ -142,6 +152,20 @@ def publish_release(args):
     r2.put_bytes(json.dumps(pointer, indent=2, sort_keys=True).encode('utf-8'),
                  'releases/latest.json')
     print('published. releases/latest.json now points at %s' % version)
+
+    if args.no_purge:
+        print('CDN not purged (--no-purge). The pointer clears itself in 60s; '
+              'anything overwritten under %s does not.' % prefix)
+        return 0
+    # A new version writes paths the edge has never seen, so only the pointer
+    # needs clearing. --force overwrites paths the edge is holding for 30 days
+    # and nothing expires them, so the whole host goes.
+    if args.force:
+        print('purging the CDN for %s (--force overwrote cached paths)' % cdn.PUBLIC_HOST)
+        cdn.purge_host()
+    else:
+        for url in cdn.purge_urls(['releases/latest.json', '%s/%s' % (prefix, MANIFEST)]):
+            print('  purged %s' % url)
     return 0
 
 
@@ -217,6 +241,10 @@ def main():
             node.add_argument('--version', help='defaults to today')
             node.add_argument('--force', action='store_true')
             node.add_argument('--dry-run', action='store_true')
+        if name == 'release':
+            node.add_argument('--no-purge', action='store_true',
+                              help='skip the CDN purge (only correct if no CDN '
+                                   'is in front of this bucket)')
         node.set_defaults(handler=handler)
     args = parser.parse_args()
     return args.handler(args)
