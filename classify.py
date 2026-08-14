@@ -73,6 +73,16 @@ HARD_EXCLUDE_ROOTS = {
     8343784: 'clandestine centre of detention',   # closure 8, Argentina
     66626342: 'urban ensemble',                   # closure 12
     134524402: 'urban layout',                    # closure 1
+    # "A grouping of buildings planned as a unit in urban development" -- a
+    # housing estate, which is part of a town and not one. Polish osiedla,
+    # Berlin and Vienna Wohnanlagen, "Renard Estate", RNZAF married quarters.
+    # 913 rows, concentrated in PL, DE, AT and CH, and the source of most of
+    # the remaining absurd names: a Wohnanlage is named by the streets it
+    # covers, so its label is a street list. Closure is 5 classes.
+    #
+    # Not the same thing as an Ortsteil or a neighbourhood, which are places
+    # people live in and give addresses as, and which this dataset keeps.
+    2282602: 'group of houses',
     # Deliberately *not* here: 'archaeological site' (Q839954). Its closure is
     # 585 classes, 79 of them settlement classes, so a categorical exclusion
     # would reach a modern city that is also an ancient one. The former-entity

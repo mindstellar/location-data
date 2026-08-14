@@ -1074,11 +1074,19 @@ class CampsAndHeritageDesignationsAreNotSettlements(unittest.TestCase):
         self.exclusions = exclusion_sets(array.array('i', []))
         self.settlement = {486972}
 
-    def test_the_four_are_excluded(self):
-        for qid in (152081, 8343784, 66626342, 134524402):
+    def test_the_five_are_excluded(self):
+        for qid in (152081, 8343784, 66626342, 134524402, 2282602):
             record = {'id': 1, 'instance_of': ['Q%d' % qid, 'Q486972']}
             self.assertFalse(is_settlement(record, self.settlement, self.exclusions),
                              'Q%d should not be a settlement' % qid)
+
+    def test_a_place_people_live_in_is_not_swept_up(self):
+        """An Ortsteil and a neighbourhood are parts of a town that people
+        give as their address. A housing estate is not."""
+        for qid in (253019, 123705, 1669338):
+            record = {'id': 3, 'instance_of': ['Q%d' % qid, 'Q486972']}
+            self.assertTrue(is_settlement(record, self.settlement, self.exclusions),
+                            'Q%d should still be a settlement' % qid)
 
     def test_an_archaeological_site_is_not_categorically_excluded(self):
         """Its closure is 585 classes, 79 of them settlement classes, so a
