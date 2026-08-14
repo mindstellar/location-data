@@ -15,7 +15,7 @@ outside single-zone countries. Those three have specific causes, given below.
 |---|---:|
 | countries | 255 |
 | administrative divisions | 4,329 |
-| settlements | 1,706,558 |
+| settlements | 1,705,222 |
 | with coordinates | 100% |
 
 Every row is a place Wikidata records. Nothing is synthesised to round the
@@ -129,8 +129,8 @@ about a third duplicates this way; most countries were a few percent.
 Beyond 2 km they are genuinely different places -- Germany has two towns called
 Aach 80 km apart, Russia two villages called Chekhrak 25 km apart -- and
 deleting one would delete a real place. Those are kept, and **their names are
-qualified with the division below the region**: `Aach (Konstanz)`. 224,930
-names (13.2%) carry such a qualifier.
+qualified with the division below the region**: `Aach (Konstanz)`. 223,594
+names (13.1%) carry such a qualifier.
 
 The largest of a group keeps the plain name, because a village of 61,549 called
 Bogota shares a region with the capital, and qualifying both would rename
@@ -148,8 +148,15 @@ one, and three tiers decide which it is:
 | | |
 |---|---|
 | the parent division | `Aach (Konstanz)` -- used where the parent has a name of its own that no other row in the group shares |
-| a compass sector within the parent | `Bankati (north Gorakhpur)` -- for rows sharing one parent, where no ancestor can separate them. 6,203 names |
-| nothing, so the row is dropped | 1,892 rows, no parent at all or nothing that distinguishes them |
+| a compass sector within the parent | `Bankati (north Gorakhpur)` -- for rows sharing one parent, where no ancestor can separate them. 4,875 names |
+| nothing, so the row is dropped | 3,228 rows, no parent at all or nothing that distinguishes them |
+
+A sector is only used where it narrows something. Two parents are refused: one
+that *is* the region, because "east Alabama" inside region Alabama tells a
+consumer nothing they have not already chosen -- five settlements called
+Hopewell were separated only that way -- and one named after the settlement,
+where the sector alone says as much and `Evergem (south Evergem)` becomes
+`Evergem (south)`. 308 names take the short form.
 
 Exactly one row in each group keeps the plain name, since one of them is what
 the name usually means -- the largest, unless another cannot be qualified at

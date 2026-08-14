@@ -163,7 +163,13 @@ than a missing one. Three tiers, then the row goes:
 1. the parent division, `Aach (Konstanz)`
 2. a compass sector within the parent, `Bankati (north Gorakhpur)`, for rows
    sharing one parent so no ancestor separates them
-3. dropped -- 1,892 rows
+3. dropped -- 3,228 rows
+
+- **A sector must narrow something.** A parent that *is* the region gives
+  "east Alabama" inside region Alabama, which is not a narrowing -- five
+  Hopewells were separated only that way, and they are dropped instead. A
+  parent named after the settlement repeats it, so the sector goes alone:
+  `Evergem (south)`, not `Evergem (south Evergem)`.
 
 - **Exactly one row keeps the plain name**, since one of them is what the name
   usually means. The largest, *unless* another row cannot be qualified at all,

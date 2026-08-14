@@ -691,7 +691,7 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
         rows = [self.row(747074, 'Aalen', 48.837222, 10.093611),
                 self.row(31868047, 'Aalen', 48.837840, 10.092990)]
         stats = self.stats()
-        out = resolve_collisions(rows, lambda q: None, stats)
+        out = resolve_collisions(rows, lambda q: None, stats, 1)
         self.assertEqual([747074], [s['id'] for s in out])
         self.assertEqual(1, stats['merged_duplicates'])
 
@@ -702,7 +702,7 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
                          geonames_id=2521886),
                 self.row(200, 'Abla', 37.142567, -2.777509, population=1421,
                          geonames_id=None)]
-        out = resolve_collisions(rows, lambda q: None, self.stats())
+        out = resolve_collisions(rows, lambda q: None, self.stats(), 1)
         self.assertEqual(1, len(out))
         self.assertEqual(1421, out[0]['population'])
         self.assertEqual(2521886, out[0]['geonames_id'])
@@ -714,7 +714,7 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
                 self.row(2, 'Aach', 47.842500, 8.853889, admin2='Q7169')]
         stats = self.stats()
         out = resolve_collisions(rows, {7167: 'Zollernalbkreis',
-                                        7169: 'Konstanz'}.get, stats)
+                                        7169: 'Konstanz'}.get, stats, 1)
         self.assertEqual(0, stats['merged_duplicates'])
         self.assertEqual(['Aach', 'Aach (Konstanz)'], [s['name'] for s in out])
         self.assertEqual('aach-konstanz', out[1]['slug'])
@@ -725,7 +725,7 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
         rows = [self.row(1, 'Sarna', 45.4, 16.0, admin2='Q900'),
                 self.row(2, 'Sarna', 45.0, 16.0, admin2='Q900')]
         stats = self.stats()
-        out = resolve_collisions(rows, {900: 'Kutina'}.get, stats)
+        out = resolve_collisions(rows, {900: 'Kutina'}.get, stats, 1)
         self.assertEqual(['Sarna', 'Sarna (south Kutina)'], [s['name'] for s in out])
         self.assertEqual(0, stats['ambiguous_names'])
 
@@ -736,7 +736,7 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
         rows = [self.row(1, 'Sarna', 45.0, 16.0, population=800),
                 self.row(2, 'Sarna', 45.2, 16.3)]
         stats = self.stats()
-        out = resolve_collisions(rows, lambda q: None, stats)
+        out = resolve_collisions(rows, lambda q: None, stats, 1)
         self.assertEqual(['Sarna'], [s['name'] for s in out])
         self.assertEqual([1], [s['id'] for s in out])
         self.assertEqual(1, stats['ambiguous_names'])
@@ -747,7 +747,7 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
         rows = [self.row(1, 'Ruse', 43.8, 25.9, admin2='Q1', population=142902),
                 self.row(2, 'Ruse', 43.4, 26.2, admin2='Q2', population=300)]
         stats = self.stats()
-        out = resolve_collisions(rows, {1: 'Ruse', 2: 'Vetovo'}.get, stats)
+        out = resolve_collisions(rows, {1: 'Ruse', 2: 'Vetovo'}.get, stats, 1)
         self.assertEqual(['Ruse', 'Ruse (Vetovo)'], [s['name'] for s in out])
         self.assertEqual(0, stats['ambiguous_names'])
 
@@ -756,7 +756,7 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
         rows = [self.row(1, 'Aach', 48.4675, 8.478611, admin2='Q1'),
                 self.row(2, 'Aach', 47.8425, 8.853889, admin2='Q2')]
         stats = self.stats()
-        out = resolve_collisions(rows, {1: 'Aach', 2: 'Konstanz'}.get, stats)
+        out = resolve_collisions(rows, {1: 'Aach', 2: 'Konstanz'}.get, stats, 1)
         self.assertEqual(['Aach', 'Aach (Konstanz)'], [s['name'] for s in out])
         self.assertEqual(0, stats['ambiguous_names'])
         self.assertEqual(2, len(out))
@@ -768,7 +768,7 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
                 self.row(1, 'Ourem', 39.6635, -8.5800),
                 self.row(2, 'Ourem', 39.6770, -8.5800)]
         stats = self.stats()
-        out = resolve_collisions(rows, lambda q: None, stats)
+        out = resolve_collisions(rows, lambda q: None, stats, 1)
         self.assertEqual([1], [s['id'] for s in out])
         self.assertEqual(2, stats['merged_duplicates'])
 
@@ -778,7 +778,7 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
         rows = [self.row(1093182, 'Bogota', 5.05, -74.0, admin2='Q1', population=61549),
                 self.row(2841, 'Bogota', 4.61, -74.08, admin2='Q2', population=8034649)]
         out = resolve_collisions(rows, {1: 'Central Savanna', 2: 'Cundinamarca'}.get,
-                                 self.stats())
+                                 self.stats(), 1)
         self.assertEqual(['Bogota', 'Bogota (Central Savanna)'],
                          [s['name'] for s in out])
 
@@ -786,7 +786,7 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
         rows = [self.row(1, 'Aach', 48.4675, 8.478611),
                 self.row(2, 'Aalen', 48.4675, 8.478611)]
         stats = self.stats()
-        out = resolve_collisions(rows, lambda q: None, stats)
+        out = resolve_collisions(rows, lambda q: None, stats, 1)
         self.assertEqual(2, len(out))
         self.assertEqual(0, stats['merged_duplicates'])
 
@@ -883,7 +883,7 @@ class NoRegionEverOffersOneNameTwice(unittest.TestCase):
                 self.row(2, 'Floq', 40.9, 20.9, admin2='Q8', population=200),
                 self.row(3, 'Floq, Klos', 40.9, 20.9)]
         stats = self.stats()
-        out = resolve_collisions(rows, {8: 'Klos', 9: 'Bulqize'}.get, stats)
+        out = resolve_collisions(rows, {8: 'Klos', 9: 'Bulqize'}.get, stats, 1)
         self.assertEqual(len(out), len({s['slug'] for s in out}))
 
     def test_every_surviving_slug_is_unique(self):
@@ -891,6 +891,37 @@ class NoRegionEverOffersOneNameTwice(unittest.TestCase):
                 self.row(2, 'Sarna', 45.6, 16.4),
                 self.row(3, 'Sarna', 46.2, 16.9),
                 self.row(4, 'Kutina', 45.5, 16.8)]
-        out = resolve_collisions(rows, lambda q: None, self.stats())
+        out = resolve_collisions(rows, lambda q: None, self.stats(), 1)
         self.assertEqual(len(out), len({s['slug'] for s in out}))
         self.assertIn('Kutina', [s['name'] for s in out])
+
+
+class ASectorOnlyHelpsIfItNarrowsSomething(unittest.TestCase):
+    """Tier 2 refuses two kinds of parent."""
+
+    row = staticmethod(OneNameOnePlaceInARegion.row)
+    stats = staticmethod(OneNameOnePlaceInARegion.stats)
+
+    def test_a_parent_that_is_the_region_gives_no_qualifier(self):
+        """Five settlements called Hopewell separated only into east, north
+        and west Alabama narrows nothing a consumer has not already picked."""
+        rows = [self.row(1, 'Hopewell', 32.0, -86.0, admin2='Q173', population=90),
+                self.row(2, 'Hopewell', 34.0, -86.5, admin2='Q173')]
+        stats = self.stats()
+        out = resolve_collisions(rows, {173: 'Alabama'}.get, stats, 173)
+        self.assertEqual(['Hopewell'], [s['name'] for s in out])
+        self.assertEqual(1, stats['ambiguous_names'])
+
+    def test_a_parent_named_after_the_place_is_reduced_to_the_sector(self):
+        """"Evergem (south Evergem)" says Evergem twice."""
+        rows = [self.row(1, 'Evergem', 51.2, 3.7, admin2='Q9', population=400),
+                self.row(2, 'Evergem', 51.0, 3.7, admin2='Q9')]
+        out = resolve_collisions(rows, {9: 'Evergem'}.get, self.stats(), 555)
+        self.assertEqual(['Evergem', 'Evergem (south)'], [s['name'] for s in out])
+
+    def test_a_real_subdivision_still_gets_named(self):
+        rows = [self.row(1, 'Bankati', 26.9, 83.4, admin2='Q9', population=400),
+                self.row(2, 'Bankati', 26.3, 83.1, admin2='Q9')]
+        out = resolve_collisions(rows, {9: 'Gorakhpur'}.get, self.stats(), 555)
+        self.assertEqual(['Bankati', 'Bankati (southwest Gorakhpur)'],
+                         [s['name'] for s in out])

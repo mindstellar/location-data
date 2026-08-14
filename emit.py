@@ -158,7 +158,7 @@ def _apply(row, qualifier):
     row['slug'] = slugify(row['name'])
 
 
-def _qualify(rows, admin2_name, stats):
+def _qualify(rows, admin2_name, stats, region_qid):
     """Give every row in a group something that says which place it is, and
     drop the ones that cannot be given anything.
 
@@ -177,7 +177,9 @@ def _qualify(rows, admin2_name, stats):
        no ancestor can separate them: "Bankati (north Gorakhpur)". Two villages
        of one name in one district is ordinary -- of the pairs under a shared
        parent, 2,775 are more than 25 km apart -- and merging them would delete
-       a real place.
+       a real place. Two parents are refused here: one that *is* the region,
+       because a sector of the region narrows nothing already chosen, and one
+       named after the settlement, where the sector alone says as much.
 
     3. **Nothing, so the row is dropped.** What is left has no parent at all,
        or two parents with the same name and the same sector.
@@ -220,7 +222,20 @@ def _qualify(rows, admin2_name, stats):
     lng0 = sum(float(rows[i]['longitude']) for i in stranded) / len(stranded)
     sectors = {}
     for i in stranded:
-        if labels[i]:
+        if not labels[i]:
+            continue
+        # A parent that *is* the region gives a sector of the region, which
+        # narrows nothing a consumer has not already chosen -- five settlements
+        # called Hopewell separated only into east, north, southeast and west
+        # Alabama. Those are dropped rather than labelled.
+        if rows[i].get('admin2_id') == 'Q%d' % region_qid:
+            continue
+        # A parent named after the settlement repeats it: "Evergem (south
+        # Evergem)", "Drvar (southwest Drvar Municipality)". The sector alone
+        # carries everything the pair of them did.
+        if labels[i].lower().startswith(rows[i]['name'].lower()):
+            sectors[i] = _sector(rows[i], lat0, lng0)
+        else:
             sectors[i] = '%s %s' % (_sector(rows[i], lat0, lng0), labels[i])
     counts = collections.Counter(sectors.values())
     resolved = [i for i in stranded if counts.get(sectors.get(i)) == 1]
@@ -246,7 +261,7 @@ def _qualify(rows, admin2_name, stats):
     return [row for index, row in enumerate(rows) if index not in set(dropped)]
 
 
-def resolve_collisions(settlements, admin2_name, stats):
+def resolve_collisions(settlements, admin2_name, stats, region_qid):
     """One name, one place, inside a region.
 
     Same name and effectively the same position means one place upstream
@@ -269,7 +284,7 @@ def resolve_collisions(settlements, admin2_name, stats):
         merged = _merge_colocated(rows)
         stats['merged_duplicates'] += len(rows) - len(merged)
         if len(merged) > 1:
-            merged = _qualify(merged, admin2_name, stats)
+            merged = _qualify(merged, admin2_name, stats, region_qid)
         resolved.extend(merged)
 
     # A qualifier can land on a name that was already in the region, because
@@ -402,7 +417,7 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
 
     for admin1_qid in list(by_region):
         by_region[admin1_qid] = resolve_collisions(by_region[admin1_qid],
-                                                   admin2_name, stats)
+                                                   admin2_name, stats, admin1_qid)
 
     regions = []
     emit = dict(admin1_selected)
