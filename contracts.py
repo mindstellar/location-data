@@ -53,7 +53,38 @@ COUNTRY_NAME_OVERRIDES = {
 }
 
 
+# Latin letters Unicode will not decompose. There is no combining form for a
+# stroke, a hook or a ligature, so NFKD leaves the letter whole and the encode()
+# below deletes it -- silently, and in the middle of a word. Poland shipped
+# Chelmno as "Chemno", Turkey shipped Ilica as "Ilca", Norway shipped Oksnes as
+# "ksnes", and Turkish dotless i is one of the commonest letters in the
+# language. The replacements are the conventional Latin transliterations, which
+# is what the decomposition does for every other accented letter anyway.
+UNDECOMPOSABLE = {
+    'Đ': 'D', 'đ': 'd',      # Serbian, Croatian, Vietnamese
+    'Ł': 'L', 'ł': 'l',      # Polish
+    'Ø': 'O', 'ø': 'o',      # Norwegian, Danish, Faroese
+    'Þ': 'Th', 'þ': 'th',    # Icelandic thorn
+    'Ð': 'D', 'ð': 'd',      # Icelandic eth
+    'Æ': 'Ae', 'æ': 'ae',    # Norwegian, Danish, Icelandic
+    'Œ': 'Oe', 'œ': 'oe',    # French
+    'ß': 'ss',               # German
+    'ı': 'i', 'İ': 'I',      # Turkish dotless and dotted i
+    'Ħ': 'H', 'ħ': 'h',      # Maltese
+    'Ŧ': 'T', 'ŧ': 't',      # Northern Sami
+    'Ə': 'E', 'ə': 'e',      # Azerbaijani
+}
+
+
 def remove_accents(input_str):
+    """Fold to ASCII, mapping the letters NFKD will not decompose.
+
+    Frozen, and this changed once. The table above was added after the
+    published data was found to be dropping those letters mid-word; the slugs
+    of the rows carrying them moved as a result. Adding an entry is safe,
+    editing one re-slugs every row that contains that letter.
+    """
+    input_str = ''.join(UNDECOMPOSABLE.get(c, c) for c in input_str)
     nfkd_form = unicodedata.normalize('NFKD', input_str)
     txt_string = u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
     return txt_string.encode('ascii', 'ignore').decode('ascii')
@@ -64,9 +95,16 @@ def slugify(input_str):
 
     Slugs are the identity an install matches on when it re-imports a country, and
     they are in published URLs. Do not change this function without a migration.
+
+    Folds through remove_accents rather than normalising again, so the two
+    always agree. They did not before: slugify saw its own NFKD and dropped the
+    undecomposable letters, so slugify("Chelmno" spelt with an l-stroke) gave
+    "chemno" while the name beside it was folded to "Chelmno". The pipeline
+    slugs an already-folded name, so this was invisible there -- but _usable()
+    slugs the raw label to decide whether it is Latin at all, and that is the
+    caller the disagreement actually reached.
     """
-    input_str = unicodedata.normalize('NFKD', input_str).encode(
-        'ascii', 'ignore').decode('ascii')
+    input_str = remove_accents(input_str)
     input_str = re.sub(r'[^\w\s-]', '', input_str).strip().lower()
     return re.sub(r'[-\s]+', '-', input_str)
 

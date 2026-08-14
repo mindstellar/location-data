@@ -36,10 +36,10 @@ from contain import (  # noqa: E402
     select_admin1s_under_country,
     select_admin1s_with_dissolved,
 )
-from contracts import coord, slugify  # noqa: E402
+from contracts import coord, remove_accents, slugify  # noqa: E402
 from countryblock import extra_fields  # noqa: E402
 from emit import resolve_collisions  # noqa: E402
-from naming import resolve_name_full, romanise  # noqa: E402
+from naming import _usable, resolve_name_full, romanise  # noqa: E402
 from validate import (  # noqa: E402
     BASELINE_DEFAULT,
     capital_presence,
@@ -788,3 +788,59 @@ class TierTwoHonoursTheExcludedClasses(unittest.TestCase):
     def test_an_ordinary_administrative_child_is_still_taken(self):
         records = {1: {'instance_of': ['Q484170']}, 2: {'instance_of': ['Q484170']}}
         self.assertEqual({1, 2}, self.selected(records))
+
+
+class FoldingLettersUnicodeWillNotDecompose(unittest.TestCase):
+    """NFKD gives no combining form for a stroke, a hook or a ligature, so
+    those letters used to be deleted mid-word rather than folded."""
+
+    def test_the_letters_are_transliterated_not_dropped(self):
+        for text, expected in (('Chełmno', 'Chelmno'),      # Polish l-stroke
+                               ('Ilıca', 'Ilica'),          # Turkish dotless i
+                               ('Øksnes', 'Oksnes'),        # Norwegian
+                               ('Đurinac', 'Durinac'),      # Serbian
+                               ('Straße', 'Strasse'),       # German
+                               ('Ærø', 'Aero')):       # Danish ligature, then
+                                                       # o-stroke folded like o-umlaut
+            self.assertEqual(expected, remove_accents(text))
+
+    def test_ordinary_accents_are_unaffected(self):
+        self.assertEqual('Zurich', remove_accents('Zürich'))
+        self.assertEqual('Krakow', remove_accents('Kraków'))
+        self.assertEqual('Reykjavik', remove_accents('Reykjavík'))
+
+    def test_slugify_and_remove_accents_agree(self):
+        """slugify used to normalise again on its own, so it dropped the
+        letters remove_accents kept and the two disagreed on the same name."""
+        for text in ('Chełmno', 'Ilıca', 'Øksnes', 'Straße'):
+            self.assertEqual(slugify(remove_accents(text)), slugify(text))
+
+
+class ADiacriticDoesNotMakeALabelLatin(unittest.TestCase):
+    """A Cyrillic letter carrying a diacritic folds to an ASCII letter, which
+    made the whole label look like it had survived the fold."""
+
+    def test_a_chuvash_label_is_not_a_latin_name(self):
+        # Folds to "a" -- the breve on the third letter and nothing else.
+        self.assertFalse(_usable('Уракăва'))
+
+    def test_plain_cyrillic_was_already_rejected(self):
+        self.assertFalse(_usable('Киров'))
+
+    def test_a_real_latin_name_is_still_usable(self):
+        for text in ('Chełmno', 'Ilıca', 'Zürich', 'Au', 'Y'):
+            self.assertTrue(_usable(text), text)
+
+    def test_junk_with_no_letters_is_still_refused(self):
+        self.assertFalse(_usable('--'))
+        self.assertFalse(_usable(''))
+
+    def test_the_russian_label_is_reached_instead(self):
+        """Rejecting the Chuvash label is not a loss: the romanisation path
+        then takes the local-language label and returns the real name."""
+        record = {'labels': {'cv': 'Уракăва',
+                             'ru': 'Ураково'}}
+        name, lang, source = resolve_name_full(record, 'ru')
+        self.assertEqual('Urakovo', name)
+        self.assertEqual('ru', lang)
+        self.assertEqual('Ураково', source)

@@ -15,7 +15,7 @@ outside single-zone countries. Those three have specific causes, given below.
 |---|---:|
 | countries | 255 |
 | administrative divisions | 4,329 |
-| settlements | 1,702,072 |
+| settlements | 1,708,450 |
 | with coordinates | 100% |
 
 Every row is a place Wikidata records. Nothing is synthesised to round the
@@ -129,19 +129,28 @@ about a third duplicates this way; most countries were a few percent.
 Beyond 2 km they are genuinely different places -- Germany has two towns called
 Aach 80 km apart, Russia two villages called Chekhrak 25 km apart -- and
 deleting one would delete a real place. Those are kept, and **their names are
-qualified with the division below the region**: `Aach (Konstanz)`. 213,381
-names (12.5%) carry such a qualifier.
+qualified with the division below the region**: `Aach (Konstanz)`. 214,421
+names (12.6%) carry such a qualifier.
 
 The largest of a group keeps the plain name, because a village of 61,549 called
 Bogota shares a region with the capital, and qualifying both would rename
 Bogota. So a plain name answers "which place does this name usually mean" and a
 qualifier answers "where is the other one".
 
-**12,784 rows (0.75%) still share a name with another row in the same region**,
-down from 248,712. They are the cases where the qualifier would not qualify:
-both rows have the same parent, or upstream records no parent for one of them.
-Mexico, Russia and Romania account for a third. If you need a unique label,
-`admin2_id` plus `name` is unique for nearly all of them, and the id always is.
+**12,445 rows (0.73%) still share a name with another row in the same region**,
+down from 248,712, in 9,325 groups:
+
+| | groups | |
+|---|---:|---|
+| the rows share one parent | 5,123 | no ancestor can separate them |
+| parents differ, no name for one | 3,550 | fixable -- the parent is not a place this dataset keeps, so its label was never loaded |
+| a row has no parent at all | 652 | upstream gap |
+
+The first group is not a defect and merging them would be one: of the pairs
+under a shared parent, 2,775 are more than 25 km apart and only 1,482 are
+within 5 km. Two villages of the same name in one district is ordinary, and in
+Mexico, Russia, Romania and Indonesia it is common. Identity is the id; the
+name is not unique and forcing it to be would delete real places.
 
 ## The three real gaps
 
@@ -243,7 +252,10 @@ defect an earlier release caused in a consumer that matched on the id alone.
   249-character German housing-estate address. Truncate if your schema needs
   to.
 - **Names are accent-folded.** `name` is ASCII; the unfolded form is not
-  currently kept.
+  currently kept. Letters Unicode will not decompose -- Polish `ł`, Turkish
+  dotless `ı`, Norwegian `ø`, Serbian `đ`, German `ß` -- are transliterated
+  rather than dropped. They used to be deleted mid-word, so Chelmno shipped as
+  `Chemno` and Ilica as `Ilca`.
 - **Machine-transliterated names are not flagged as such.** They can be
   identified by the presence of an `alt_names` entry in a non-Latin script for
   the same language as `name_lang`.

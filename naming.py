@@ -17,7 +17,7 @@ import unicodedata
 from anyascii import anyascii
 from pypinyin import Style, lazy_pinyin
 
-from contracts import slugify
+from contracts import remove_accents, slugify
 
 # --- romanisation -----------------------------------------------------------
 #
@@ -116,17 +116,36 @@ def romanise(text, lang):
 _QUALIFIED = re.compile(r'\(')
 
 
+# How much of a label has to survive folding for it to be a Latin-script name
+# rather than a non-Latin one the fold left a residue of.
+_MIN_LETTERS_KEPT = 0.6
+
+
 def _usable(text):
-    """A label that can be a name at all: it has to contain a letter and
-    survive slugification, because the slug is the identity.
+    """A label that can be a name at all: Latin script, containing a letter,
+    and surviving slugification, because the slug is the identity.
 
     Length is deliberately not a criterion. "Au" is a village in Austria and
     "Y" is a commune in France, so a minimum length would delete real places;
     what actually marks junk is having no letters, as in "--".
+
+    The proportion is a criterion, and that is the part that was wrong.
+    Surviving the fold was read as "already Latin", which holds for Cyrillic --
+    "Киров" folds to nothing -- right up until a label uses a Cyrillic letter
+    that carries a diacritic. Chuvash "ă" decomposes to "a" plus a combining
+    breve, so "Уракăва" folded to "a": non-empty, so the label was taken for a
+    Latin name, romanisation never ran, and 659 Russian settlements shipped
+    called "a", "e" or "aae" -- their diacritics and nothing else. Requiring
+    most of the letters to survive rejects the label instead, and the
+    romanisation path then reaches the Russian label and returns "Urakovo".
     """
     if not text:
         return False
-    if not any(c.isalpha() for c in text):
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return False
+    kept = [c for c in remove_accents(text) if c.isalpha()]
+    if len(kept) < len(letters) * _MIN_LETTERS_KEPT:
         return False
     return bool(slugify(text))
 
