@@ -49,6 +49,22 @@ HARD_EXCLUDE_ROOTS = {
     130003: 'ski resort',
     79007: 'street',
     1348006: 'city block',
+    # Bodendenkmaeler: buried archaeological monuments from the German state
+    # heritage registers, named by their register id -- "Cultural heritage
+    # D-1-6933-0003 in Titting". 20,914 shipped as settlements, every one of
+    # them German, 1.2% of the whole dataset.
+    #
+    # The exclusion has to be hard because Wikidata also tags them Q486972
+    # human settlement, meaning "the site of a former settlement", and positive
+    # evidence beats every softer rule. The former-entity branch does not catch
+    # them either: they carry no end date, because the monument designation is
+    # current even where the settlement is two thousand years gone. Archaeology
+    # being excluded is what the documentation already claims; this is what
+    # makes it true. Closure is 8 classes.
+    22969563: 'German designation for archaeological heritage site',
+    # "Dwelling place of seasonal sedentary hunters and gatherers", reached
+    # separately from the same registers. Closure is 2 classes.
+    17540983: 'open air site',
 }
 
 # "Former" is different in kind, and treating it as categorical deleted Rome,

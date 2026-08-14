@@ -120,6 +120,20 @@ _QUALIFIED = re.compile(r'\(')
 # rather than a non-Latin one the fold left a residue of.
 _MIN_LETTERS_KEPT = 0.6
 
+# Past this, a label is a description of a place and not its name. The same
+# judgement the parenthesis rule above makes, for the cases that carry no
+# parenthesis:
+#
+#   Wohnsiedlung Gontardweg 52; 53; 54; 55; 56; 57; 58; ...        (249 chars)
+#   Conjunto formado pela casa, capela, jardins e portais da ...    (97)
+#   Uklad urbanistyczny z sylwetka miasta od pld. i wsch., ...     (240)
+#
+# Names are short: the median is 11 characters and the 99th percentile is 49,
+# so this cannot reach one. The longest thing it removes that is arguably a
+# name is a 249-character Honduran label consisting of a village name followed
+# by a message to the author's friends.
+_MAX_NAME = 100
+
 
 def _usable(text):
     """A label that can be a name at all: Latin script, containing a letter,
@@ -140,6 +154,8 @@ def _usable(text):
     romanisation path then reaches the Russian label and returns "Urakovo".
     """
     if not text:
+        return False
+    if len(text) > _MAX_NAME:
         return False
     letters = [c for c in text if c.isalpha()]
     if not letters:

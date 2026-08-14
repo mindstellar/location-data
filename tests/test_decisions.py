@@ -29,7 +29,7 @@ from dump_build import (  # noqa: E402
     resolve_name,
     subclass_closure,
 )
-from classify import Exclusions, is_not_a_place  # noqa: E402
+from classify import Exclusions, exclusion_sets, is_not_a_place  # noqa: E402
 from contain import (  # noqa: E402
     is_country_item,
     select_admin1s,
@@ -982,3 +982,50 @@ class TheLocalNameBeatsAForeignRendering(unittest.TestCase):
         transliterations, and reversing one corrupts the name."""
         self.assertEqual(('Benito Juarez', 'es', None),
                          self.name({'es': 'Benito Juarez', 'ce': 'Бенито Хуарез'}, 'es'))
+
+
+class ALabelCanBeTooLongToBeAName(unittest.TestCase):
+    """The parenthesis rule catches bot glosses that carry one. Some carry
+    none and are still descriptions."""
+
+    def test_a_street_list_is_not_a_name(self):
+        text = ('Wohnsiedlung Gontardweg ' + '; '.join(str(n) for n in range(52, 120)))
+        self.assertGreater(len(text), 100)
+        self.assertFalse(_usable(text))
+
+    def test_a_heritage_register_description_is_not_a_name(self):
+        self.assertFalse(_usable(
+            'Conjunto constituido pelo imovel Vila Alice, tambem denominado por '
+            'Casa de Fanny Owen e zona envolvente e pelo imovel fronteiro'))
+
+    def test_a_long_but_real_name_is_kept(self):
+        """The longest genuine place names are far under the ceiling --
+        the Welsh one is 58 characters, and the 99th percentile is 49."""
+        for text in ('Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch',
+                     'Bulawayo', 'Y', 'Au',
+                     'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson'):
+            self.assertTrue(_usable(text), text)
+
+
+class ArchaeologyStaysExcluded(unittest.TestCase):
+    """Wikidata tags German buried monuments as human settlements too, so only
+    a hard exclusion keeps them out."""
+
+    def setUp(self):
+        # Bodendenkmal -> nothing; the settlement claim is on the row itself.
+        self.p279 = array.array('i', [])
+        self.exclusions = exclusion_sets(self.p279)
+        self.settlement = {486972}
+
+    def test_a_buried_monument_is_not_a_settlement(self):
+        record = {'id': 98339067, 'instance_of': ['Q22969563', 'Q486972'],
+                  'labels': {'en': 'Cultural heritage D-1-6933-0003 in Titting'}}
+        self.assertFalse(is_settlement(record, self.settlement, self.exclusions))
+
+    def test_an_open_air_site_is_not_a_settlement(self):
+        record = {'id': 1, 'instance_of': ['Q17540983', 'Q486972']}
+        self.assertFalse(is_settlement(record, self.settlement, self.exclusions))
+
+    def test_an_ordinary_settlement_is_untouched(self):
+        record = {'id': 2, 'instance_of': ['Q486972']}
+        self.assertTrue(is_settlement(record, self.settlement, self.exclusions))
