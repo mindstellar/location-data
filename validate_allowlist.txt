@@ -33,3 +33,5 @@ UY: 852 settlements exist, 846 attach (99%). Confirmed independently against dir
 CR: 108 settlements exist, 99 attach (92%). The 159-city baseline exceeds what Wikidata holds for Costa Rica.
 
 
+
+GG: Not sparsity -- a one-release step, and only visible because Guernsey ships 8 settlements so three rows are 38% of it. The three are Alderney concentration camp, Alderney concentration camps and Lager Norderney, removed by the categorical exclusion of Q152081/Q328468: Wikidata tags a Nazi camp as an instance of human settlement, so nothing softer kept them out. Delete this entry once the release carrying the exclusion is the baseline, at which point the ratio is 1.0x.

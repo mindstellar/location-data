@@ -134,6 +134,37 @@ _MIN_LETTERS_KEPT = 0.6
 # by a message to the author's friends.
 _MAX_NAME = 100
 
+# A label that is a postal address rather than a name. Wikidata's English
+# labels for Russian villages are routinely the whole containment chain:
+#
+#   Pavlovskaya, Vozhegodsky Selsoviet, Vozhegodsky District, Vologda Oblast
+#   Novoye, Sosnovskoye Rural Settlement, Vologodsky District, Vologda Oblast
+#
+# The name is the head; everything after it is where it is, which the row
+# already records in admin1_id and admin2_id. Structurally this is the
+# parenthesised gloss above with commas instead of brackets, and it reaches
+# 2,715 rows.
+#
+# Two commas at least, and an administrative word after the first, so a real
+# name keeps its comma: "Washington, D.C." has one comma and no such word, and
+# a Russian village genuinely called "Frunze, 2" is untouched for both reasons.
+_ADDRESS_TAIL = re.compile(
+    r'\b(district|oblast|krai|okrug|raion|rayon|selsoviet|sel.soviet|'
+    r'rural settlement|urban settlement|municipality|county|province|region|'
+    r'prefecture|voivodeship|governorate|department|commune|canton)\b',
+    re.IGNORECASE)
+
+
+def _strip_address(text):
+    """The head of a comma-separated containment chain, or the text unchanged."""
+    if text.count(',') < 2:
+        return text
+    head, _, tail = text.partition(',')
+    if not _ADDRESS_TAIL.search(tail):
+        return text
+    head = head.strip()
+    return head if head and _usable(head) else text
+
 
 def _usable(text):
     """A label that can be a name at all: Latin script, containing a letter,
@@ -261,7 +292,8 @@ def resolve_name_full(record, native_lang):
                       _romanised(local, clean),
                       _plain(candidates, clean)):
             if found:
-                return found
+                name, lang, source = found
+                return _strip_address(name), lang, source
 
     # Nothing usable and nothing that can honestly be romanised -- an Arabic
     # label, or a label that is punctuation. Returning the first candidate

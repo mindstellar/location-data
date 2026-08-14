@@ -65,6 +65,20 @@ HARD_EXCLUDE_ROOTS = {
     # "Dwelling place of seasonal sedentary hunters and gatherers", reached
     # separately from the same registers. Closure is 2 classes.
     17540983: 'open air site',
+    # The same override in other clothes: each of these is tagged Q486972
+    # human settlement as well, so nothing softer keeps them out. A camp is
+    # not a town, a heritage designation over part of a city is not a place,
+    # and a layout is a drawing of one.
+    152081: 'concentration camp',                 # closure 35
+    8343784: 'clandestine centre of detention',   # closure 8, Argentina
+    66626342: 'urban ensemble',                   # closure 12
+    134524402: 'urban layout',                    # closure 1
+    # Deliberately *not* here: 'archaeological site' (Q839954). Its closure is
+    # 585 classes, 79 of them settlement classes, so a categorical exclusion
+    # would reach a modern city that is also an ancient one. The former-entity
+    # branch already handles archaeology, and it handles it with the rescue
+    # that keeps Rome. Nor 'group of houses' (Q2282602) or 'historic grouping'
+    # (Q3317612), which are real places in some countries.
 }
 
 # "Former" is different in kind, and treating it as categorical deleted Rome,

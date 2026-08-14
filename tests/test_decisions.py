@@ -39,7 +39,7 @@ from contain import (  # noqa: E402
 from contracts import coord, remove_accents, slugify  # noqa: E402
 from countryblock import extra_fields  # noqa: E402
 from emit import resolve_collisions  # noqa: E402
-from naming import _usable, resolve_name_full, romanise  # noqa: E402
+from naming import _strip_address, _usable, resolve_name_full, romanise  # noqa: E402
 from validate import (  # noqa: E402
     BASELINE_DEFAULT,
     capital_presence,
@@ -1028,4 +1028,62 @@ class ArchaeologyStaysExcluded(unittest.TestCase):
 
     def test_an_ordinary_settlement_is_untouched(self):
         record = {'id': 2, 'instance_of': ['Q486972']}
+        self.assertTrue(is_settlement(record, self.settlement, self.exclusions))
+
+
+class AnAddressIsNotAName(unittest.TestCase):
+    """Wikidata's English labels for Russian villages are routinely the whole
+    containment chain. The name is the head; the rest is where it is, which
+    the row already records in admin1_id and admin2_id."""
+
+    def test_a_containment_chain_is_cut_to_its_head(self):
+        self.assertEqual('Pavlovskaya', _strip_address(
+            'Pavlovskaya, Vozhegodsky Selsoviet, Vozhegodsky District, Vologda Oblast'))
+        self.assertEqual('Novoye', _strip_address(
+            'Novoye, Sosnovskoye Rural Settlement, Vologodsky District, Vologda Oblast'))
+
+    def test_a_real_name_keeps_its_comma(self):
+        """One comma, and no administrative word after it."""
+        for text in ('Washington, D.C.', 'Frankfurt, Oder', 'Stratford-upon-Avon',
+                     'Saint-Remy-en-Bouzemont-Saint-Genest-et-Isson'):
+            self.assertEqual(text, _strip_address(text))
+
+    def test_a_list_of_things_is_not_an_address(self):
+        """Two commas but no administrative word: a listed building's name,
+        which is a different problem and not this one's to solve."""
+        text = 'Middle Turn, The Turn, Turn End, and retaining walls and pool'
+        self.assertEqual(text, _strip_address(text))
+
+    def test_the_head_must_still_be_a_usable_name(self):
+        self.assertEqual('-, Vologodsky District, Vologda Oblast',
+                         _strip_address('-, Vologodsky District, Vologda Oblast'))
+
+    def test_it_applies_to_the_resolved_name(self):
+        record = {'labels': {'en': 'Pavlovskaya, Vozhegodsky Selsoviet, '
+                                   'Vozhegodsky District, Vologda Oblast',
+                             'ru': 'Павловская'}}
+        self.assertEqual(('Pavlovskaya', 'en', None),
+                         resolve_name_full(record, 'ru'))
+
+
+class CampsAndHeritageDesignationsAreNotSettlements(unittest.TestCase):
+    """Each carries Q486972 human settlement as well, so only a categorical
+    exclusion keeps it out."""
+
+    def setUp(self):
+        self.exclusions = exclusion_sets(array.array('i', []))
+        self.settlement = {486972}
+
+    def test_the_four_are_excluded(self):
+        for qid in (152081, 8343784, 66626342, 134524402):
+            record = {'id': 1, 'instance_of': ['Q%d' % qid, 'Q486972']}
+            self.assertFalse(is_settlement(record, self.settlement, self.exclusions),
+                             'Q%d should not be a settlement' % qid)
+
+    def test_an_archaeological_site_is_not_categorically_excluded(self):
+        """Its closure is 585 classes, 79 of them settlement classes, so a
+        hard exclusion would reach a modern city that is also an ancient one.
+        The former-entity branch handles archaeology, with the rescue that
+        keeps Rome."""
+        record = {'id': 2, 'instance_of': ['Q839954', 'Q486972']}
         self.assertTrue(is_settlement(record, self.settlement, self.exclusions))
