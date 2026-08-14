@@ -90,7 +90,8 @@ def default_version():
 
 def build_version(build_dir):
     with open(os.path.join(build_dir, MANIFEST), encoding='utf-8') as handle:
-        return json.load(handle)['version']
+        manifest = json.load(handle)
+        return manifest.get('s_version') or manifest['version']
 
 
 def collect(build_dir):

@@ -702,6 +702,13 @@ def main():
     ).encode('utf-8')).hexdigest()[:16]
 
     manifest = {
+        # 's_version', not 'version'. The release pointer uses 'version' for
+        # the release label -- 2026-08-14T0715Z -- and 's_version' for this
+        # hash, and the manifest calling the hash 'version' meant one field
+        # name carried two different things across two documents a consumer
+        # reads together. Both are emitted here for a release, so anything
+        # already reading 'version' keeps working.
+        's_version': fingerprint,
         'version': fingerprint,
         'license': 'CC0-1.0',
         'source': 'https://www.wikidata.org/ (Wikidata truthy dump, CC0)',

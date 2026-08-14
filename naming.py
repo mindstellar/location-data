@@ -200,31 +200,52 @@ def resolve_name_full(record, native_lang):
         if text:
             candidates.append((lang, text))
 
-    for lang, text in candidates:
-        if _usable(text) and not _QUALIFIED.search(text):
-            return text, lang, None
-    for lang, text in candidates:
-        if _usable(text):
-            return text, lang, None
-
-    # No Latin-script label anywhere. Transliterate, in the same preference
-    # order, and report what it was transliterated from so the caller can keep
-    # the original script in the record rather than losing it.
+    # Romanising the local label is *not* the last resort. It used to be, and
+    # that let any language's Latin label win over the country's own name:
+    # Bulgarian villages shipped as "Arda (obwod Chaskowo)" from a Polish
+    # label, Belarusian ones as "Dabucyno valscius" from Lithuanian and
+    # "Lyeninski Rayon" from Cebuano, and Chuvash ones as "Oerakovo" from
+    # French where the Russian label gives "Urakovo". 12,204 rows took a name
+    # from a language with no connection to the place.
     #
-    # Only from the local language, though. A label in an unrelated language is
-    # frequently itself a transliteration of a Latin original, and reversing
-    # one corrupts the name: Wikidata carries bot-written Chechen and Serbian
-    # Cyrillic labels for Mexican places, and romanising those produced
-    # "Avikola la Morena (Ermosiyo)" for Avicola la Morena (Hermosillo), and
-    # "Benito Khuarez" for Benito Juarez, across 5,623 rows. The local-language
-    # label is the only one that is the name rather than a rendering of it.
+    # English and mul still come first, because a real English exonym is a
+    # better name than a transliteration. Everything else comes after.
+    #
+    # Romanisation stays restricted to the local language. A label in an
+    # unrelated language is frequently itself a transliteration of a Latin
+    # original, and reversing one corrupts the name: Wikidata carries
+    # bot-written Chechen and Serbian Cyrillic labels for Mexican places, and
+    # romanising those produced "Avikola la Morena (Ermosiyo)" for Avicola la
+    # Morena (Hermosillo) across 5,623 rows.
     base = native_lang.split('-')[0] if native_lang else None
-    for lang, text in candidates:
-        if lang != 'mul' and (base is None or lang.split('-')[0] != base):
-            continue
-        romanised = romanise(text, lang)
-        if romanised and _usable(romanised):
-            return romanised, lang, text
+    local = [(lang, text) for lang, text in candidates
+             if lang == 'mul' or (base is not None and lang.split('-')[0] == base)]
+    preferred = [(lang, text) for lang, text in candidates
+                 if lang in ('en', 'mul')
+                 or (base is not None and lang.split('-')[0] == base)]
+
+    def _romanised(pairs, clean):
+        for lang, text in pairs:
+            out = romanise(text, lang)
+            if out and _usable(out) and not (clean and _QUALIFIED.search(out)):
+                return out, lang, text
+        return None
+
+    def _plain(pairs, clean):
+        for lang, text in pairs:
+            if _usable(text) and not (clean and _QUALIFIED.search(text)):
+                return text, lang, None
+        return None
+
+    # Clean labels first, in three bands; then the same three with a
+    # parenthesised qualifier allowed, for an entity whose every label is
+    # qualified.
+    for clean in (True, False):
+        for found in (_plain(preferred, clean),
+                      _romanised(local, clean),
+                      _plain(candidates, clean)):
+            if found:
+                return found
 
     # Nothing usable and nothing that can honestly be romanised -- an Arabic
     # label, or a label that is punctuation. Returning the first candidate

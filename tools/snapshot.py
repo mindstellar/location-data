@@ -52,7 +52,7 @@ def snapshot(build_dir):
         }
 
     return {
-        's_version': manifest['version'],
+        's_version': manifest.get('s_version') or manifest['version'],
         's_source': manifest['source'],
         's_license': manifest['license'],
         'countries_total': len(countries),

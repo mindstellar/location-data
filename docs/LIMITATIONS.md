@@ -15,7 +15,7 @@ outside single-zone countries. Those three have specific causes, given below.
 |---|---:|
 | countries | 255 |
 | administrative divisions | 4,329 |
-| settlements | 1,705,222 |
+| settlements | 1,705,076 |
 | with coordinates | 100% |
 
 Every row is a place Wikidata records. Nothing is synthesised to round the
@@ -33,7 +33,9 @@ Each release carries the same records three ways, under
 | `csv/<CC>.csv` | one row per settlement, flat |
 
 `manifest.json` lists every country with its file paths, sha256 of each, and
-counts. Fetch that first; it is the only URL worth hardcoding, and files are
+counts. Its `s_version` is the content fingerprint, the same field name the
+release pointer uses for it; `version` carries the same value for consumers
+that already read it. Fetch that first; it is the only URL worth hardcoding, and files are
 named by ISO code so a country being renamed upstream cannot move one.
 
 Field names are this dataset's own and deliberately neutral. An earlier release
@@ -201,6 +203,16 @@ romanisations, which is again NGA GNS.
 
 Where a name *was* transliterated, the original script is kept in `alt_names`
 under its own language code, so nothing is lost.
+
+**The local name outranks a foreign rendering of it.** Only English and `mul`
+come first, because a real English exonym is what an international consumer is
+looking for; everything else loses to romanising the country's own label.
+Romanisation used to be the last resort, which shipped Bulgarian villages under
+Polish names (`Arda (obwod Chaskowo)`), Belarusian ones under Lithuanian and
+Cebuano, and Chuvash ones under French -- 12,204 rows. Names still coming from
+an unrelated language are 3.0%, and are almost all cases where that language
+carries the clean form while the local label is parenthesised: `Cabildo`
+against `Cabildo (ciudad)`.
 
 ### Timezone is 46.4%
 

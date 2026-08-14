@@ -257,10 +257,17 @@ class ResolveName(unittest.TestCase):
     def test_a_latin_label_is_found_when_the_official_language_is_not_latin(self):
         """Preferring the official language unconditionally picked the Cyrillic
         label, which folded away to nothing, while a usable Latin-script label
-        went unused."""
+        went unused. The Latin label is still found -- but from the local
+        language by romanisation, not from German: "Iwanowka" is how German
+        writes it, "Ivanovka" is the place."""
         record = {'labels': {'ru': 'Ивановка', 'de': 'Iwanowka'}}
         name, lang = resolve_name(record, 'ru')
-        self.assertEqual((name, lang), ('Iwanowka', 'de'))
+        self.assertEqual((name, lang), ('Ivanovka', 'ru'))
+
+    def test_a_latin_label_is_used_when_the_local_one_cannot_be_romanised(self):
+        """Arabic is refused, so there is nothing to prefer over German."""
+        record = {'labels': {'ar': 'الغابة', 'de': 'Al-Ghaba'}}
+        self.assertEqual(resolve_name(record, 'ar'), ('Al-Ghaba', 'de'))
 
 
 class CapitalPresence(unittest.TestCase):
@@ -397,12 +404,20 @@ class ResolveNameWithRomanisation(unittest.TestCase):
         self.assertEqual((None, None, None),
                          resolve_name_full({'labels': {'ar': 'الغابة'}}, 'ar'))
 
-    def test_romanisation_is_the_last_resort_not_the_first(self):
-        # A Russian village labelled in ru and de must take the German label,
-        # because a real name beats a machine-made one.
+    def test_only_english_and_mul_outrank_the_local_name(self):
+        """A German exonym is a real name, but it is a German one. Romanising
+        the local label used to come after every language's Latin label, which
+        shipped Bulgarian villages under Polish names and Chuvash ones under
+        French. English still wins, because an English exonym is what an
+        international consumer is looking for."""
         name, lang, source = resolve_name_full(
             {'labels': {'ru': 'Москва', 'de': 'Moskau'}}, 'ru')
-        self.assertEqual(('Moskau', 'de'), (name, lang))
+        self.assertEqual(('Moskva', 'ru'), (name, lang))
+        self.assertEqual('Москва', source)
+
+        name, lang, source = resolve_name_full(
+            {'labels': {'ru': 'Москва', 'de': 'Moskau', 'en': 'Moscow'}}, 'ru')
+        self.assertEqual(('Moscow', 'en'), (name, lang))
         self.assertIsNone(source)
 
 
@@ -925,3 +940,45 @@ class ASectorOnlyHelpsIfItNarrowsSomething(unittest.TestCase):
         out = resolve_collisions(rows, {9: 'Gorakhpur'}.get, self.stats(), 555)
         self.assertEqual(['Bankati', 'Bankati (southwest Gorakhpur)'],
                          [s['name'] for s in out])
+
+
+class TheLocalNameBeatsAForeignRendering(unittest.TestCase):
+    """Romanising the local label used to be the last resort, so any
+    language's Latin label outranked the country's own name."""
+
+    def name(self, labels, native):
+        return resolve_name_full({'labels': labels}, native)
+
+    def test_a_french_rendering_loses_to_the_russian_name(self):
+        """Chuvash villages shipped as 'Oerakovo' -- a French transliteration
+        -- where the Russian label gives Urakovo."""
+        self.assertEqual(('Urakovo', 'ru', 'Ураково'),
+                         self.name({'fr': 'Oerakovo', 'ru': 'Ураково'}, 'ru'))
+
+    def test_a_polish_rendering_loses_to_the_bulgarian_name(self):
+        """'Arda (obwod Chaskowo)' is a Polish label carrying a Polish
+        administrative gloss, and it won because it was Latin."""
+        self.assertEqual(('Arda', 'bg', 'Арда'),
+                         self.name({'pl': 'Arda (obwod Chaskowo)', 'bg': 'Арда'}, 'bg'))
+
+    def test_a_real_english_exonym_still_wins(self):
+        """A genuine English name is better than a transliteration, which is
+        why English is not demoted along with the rest."""
+        self.assertEqual(('Moscow', 'en', None),
+                         self.name({'en': 'Moscow', 'ru': 'Москва'}, 'ru'))
+
+    def test_a_foreign_label_still_wins_over_a_qualified_local_one(self):
+        """Both are Latin, so nothing is being romanised and the clean label
+        is the better name: 'Cabildo', not 'Cabildo (ciudad)'."""
+        self.assertEqual(('Cabildo', 'nl', None),
+                         self.name({'nl': 'Cabildo', 'es': 'Cabildo (ciudad)'}, 'es'))
+
+    def test_a_foreign_label_is_still_used_when_it_is_all_there_is(self):
+        self.assertEqual(('Lyeninski Rayon', 'ceb', None),
+                         self.name({'ceb': 'Lyeninski Rayon'}, 'be'))
+
+    def test_a_bot_cyrillic_label_is_still_not_romanised(self):
+        """The Mexican trap: Cyrillic labels for Latin-named places are
+        transliterations, and reversing one corrupts the name."""
+        self.assertEqual(('Benito Juarez', 'es', None),
+                         self.name({'es': 'Benito Juarez', 'ce': 'Бенито Хуарез'}, 'es'))
