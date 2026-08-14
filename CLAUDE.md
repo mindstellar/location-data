@@ -155,13 +155,26 @@ Beyond 2 km they are different places. Germany has two towns called Aach 80 km
 apart, and Colombia and Guatemala were each about a third duplicates. Those are
 kept, and their names qualified with the P131 parent: `Aach (Konstanz)`.
 
-- **The largest of a group keeps the bare name.** Qualifying every row renamed
-  the capital of Colombia, because a village of 61,549 called Bogota sits in
-  the same region -- and the same for Vilnius. Both then failed the
-  contains-its-own-capital check, which is exactly what that check is for.
-- **A qualifier that does not qualify is not used.** Where two rows share a
-  parent, or the parent is named after the place, the bare name is left and
-  counted in `ambiguous_names`.
+**No region contains the same name twice, and that is a guarantee.** A name
+identifying two places identifies neither, and a consumer picking from a list
+cannot see that the choice was ambiguous -- so an unidentifiable row is worse
+than a missing one. Three tiers, then the row goes:
+
+1. the parent division, `Aach (Konstanz)`
+2. a compass sector within the parent, `Bankati (north Gorakhpur)`, for rows
+   sharing one parent so no ancestor separates them
+3. dropped -- 1,892 rows
+
+- **Exactly one row keeps the plain name**, since one of them is what the name
+  usually means. The largest, *unless* another row cannot be qualified at all,
+  in which case that one takes it. Always giving it to the largest left both
+  rows bare whenever the other was the unqualifiable one -- a settlement named
+  after its own municipality gets nothing from it, and that was 2,987 groups.
+  Handing it to the largest unconditionally also renamed the capital of
+  Colombia, because a village of 61,549 called Bogota shares its region.
+- **The final sweep is not optional.** A qualifier can land on a name that was
+  already in the region: this builds `Floq (Klos)` and upstream shipped
+  `Floq, Klos`, and they never meet because they start in different groups.
 
 ## Traps that have already been hit
 

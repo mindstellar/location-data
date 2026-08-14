@@ -719,15 +719,37 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
         self.assertEqual(['Aach', 'Aach (Konstanz)'], [s['name'] for s in out])
         self.assertEqual('aach-konstanz', out[1]['slug'])
 
-    def test_a_qualifier_that_does_not_qualify_is_not_used(self):
-        """Two rows under the same parent would both read 'Sarna (Kutina)',
-        which distinguishes nothing. The bare name is left and counted."""
-        rows = [self.row(1, 'Sarna', 45.0, 16.0, admin2='Q900'),
-                self.row(2, 'Sarna', 45.2, 16.3, admin2='Q900')]
+    def test_one_parent_two_rows_falls_back_to_a_compass_sector(self):
+        """Both are in Kutina, so no ancestor separates them, but the northern
+        one is the northern one and that is true without any further data."""
+        rows = [self.row(1, 'Sarna', 45.4, 16.0, admin2='Q900'),
+                self.row(2, 'Sarna', 45.0, 16.0, admin2='Q900')]
         stats = self.stats()
         out = resolve_collisions(rows, {900: 'Kutina'}.get, stats)
-        self.assertEqual(['Sarna', 'Sarna'], [s['name'] for s in out])
+        self.assertEqual(['Sarna', 'Sarna (south Kutina)'], [s['name'] for s in out])
+        self.assertEqual(0, stats['ambiguous_names'])
+
+    def test_a_row_that_cannot_be_identified_at_all_is_dropped(self):
+        """No parent, so no qualifier of any kind. A name that identifies two
+        places identifies neither, and a consumer picking from a list cannot
+        tell that the choice was ambiguous."""
+        rows = [self.row(1, 'Sarna', 45.0, 16.0, population=800),
+                self.row(2, 'Sarna', 45.2, 16.3)]
+        stats = self.stats()
+        out = resolve_collisions(rows, lambda q: None, stats)
+        self.assertEqual(['Sarna'], [s['name'] for s in out])
+        self.assertEqual([1], [s['id'] for s in out])
         self.assertEqual(1, stats['ambiguous_names'])
+
+    def test_the_unqualifiable_row_keeps_the_plain_name(self):
+        """Ruse sits in Ruse municipality, so its parent gives it nothing.
+        Handing the plain name to the largest instead left both rows bare."""
+        rows = [self.row(1, 'Ruse', 43.8, 25.9, admin2='Q1', population=142902),
+                self.row(2, 'Ruse', 43.4, 26.2, admin2='Q2', population=300)]
+        stats = self.stats()
+        out = resolve_collisions(rows, {1: 'Ruse', 2: 'Vetovo'}.get, stats)
+        self.assertEqual(['Ruse', 'Ruse (Vetovo)'], [s['name'] for s in out])
+        self.assertEqual(0, stats['ambiguous_names'])
 
     def test_a_parent_named_after_the_place_is_not_a_qualifier(self):
         """'Aach (Aach)' says nothing."""
@@ -737,6 +759,7 @@ class OneNameOnePlaceInARegion(unittest.TestCase):
         out = resolve_collisions(rows, {1: 'Aach', 2: 'Konstanz'}.get, stats)
         self.assertEqual(['Aach', 'Aach (Konstanz)'], [s['name'] for s in out])
         self.assertEqual(0, stats['ambiguous_names'])
+        self.assertEqual(2, len(out))
 
     def test_three_items_strung_out_still_collapse_to_one(self):
         """Single-link, not pairwise: the outer two are 3 km apart and would
@@ -844,3 +867,30 @@ class ADiacriticDoesNotMakeALabelLatin(unittest.TestCase):
         self.assertEqual('Urakovo', name)
         self.assertEqual('ru', lang)
         self.assertEqual('Ураково', source)
+
+
+class NoRegionEverOffersOneNameTwice(unittest.TestCase):
+    """The guarantee, checked at the boundary rather than inside a group."""
+
+    row = staticmethod(OneNameOnePlaceInARegion.row)
+    stats = staticmethod(OneNameOnePlaceInARegion.stats)
+
+    def test_a_qualifier_cannot_land_on_a_name_already_there(self):
+        """Wikidata disambiguates some of its own labels, and differently:
+        this builds 'Floq (Klos)' while upstream shipped 'Floq, Klos'. They
+        start in different groups and would never otherwise meet."""
+        rows = [self.row(1, 'Floq', 40.6, 20.7, admin2='Q9', population=400),
+                self.row(2, 'Floq', 40.9, 20.9, admin2='Q8', population=200),
+                self.row(3, 'Floq, Klos', 40.9, 20.9)]
+        stats = self.stats()
+        out = resolve_collisions(rows, {8: 'Klos', 9: 'Bulqize'}.get, stats)
+        self.assertEqual(len(out), len({s['slug'] for s in out}))
+
+    def test_every_surviving_slug_is_unique(self):
+        rows = [self.row(1, 'Sarna', 45.0, 16.0, population=800),
+                self.row(2, 'Sarna', 45.6, 16.4),
+                self.row(3, 'Sarna', 46.2, 16.9),
+                self.row(4, 'Kutina', 45.5, 16.8)]
+        out = resolve_collisions(rows, lambda q: None, self.stats())
+        self.assertEqual(len(out), len({s['slug'] for s in out}))
+        self.assertIn('Kutina', [s['name'] for s in out])

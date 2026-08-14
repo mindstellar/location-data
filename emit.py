@@ -135,48 +135,115 @@ def _merge_colocated(rows):
     return merged
 
 
+# Compass sectors, for the groups whose rows share one parent so no ancestor
+# can separate them. "north Gorakhpur" is true by construction: both rows are
+# in Gorakhpur, so the northern one is the northern one, and no coordinate for
+# the parent is needed to say it.
+_SECTORS = ('north', 'northeast', 'east', 'southeast',
+            'south', 'southwest', 'west', 'northwest')
+
+
+def _sector(row, lat0, lng0):
+    """Which eighth of the compass `row` sits in, seen from (lat0, lng0)."""
+    lat1, lat2 = math.radians(lat0), math.radians(float(row['latitude']))
+    delta = math.radians(float(row['longitude']) - lng0)
+    y = math.sin(delta) * math.cos(lat2)
+    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(delta)
+    degrees = (math.degrees(math.atan2(y, x)) + 360) % 360
+    return _SECTORS[int((degrees + 22.5) // 45) % 8]
+
+
+def _apply(row, qualifier):
+    row['name'] = '%s (%s)' % (row['name'], qualifier)
+    row['slug'] = slugify(row['name'])
+
+
 def _qualify(rows, admin2_name, stats):
-    """Name the division below the region, so two places that really do share
-    a name in one region can be told apart.
+    """Give every row in a group something that says which place it is, and
+    drop the ones that cannot be given anything.
 
-    "Aach" and "Aach" in Baden-Wurttemberg are indistinguishable in a list;
-    "Aach" and "Aach (Konstanz)" are not. The qualifier is the P131 parent --
-    the district or municipality -- which is how Wikidata disambiguates these
-    itself.
+    A name that identifies two places identifies neither. It is worse than a
+    missing row, because a consumer picking from a list has no way to know the
+    choice was ambiguous and will silently take the wrong one. So the rule is
+    not "qualify where possible" but "qualify or do not ship".
 
-    The largest of the group keeps the bare name. Qualifying every row instead
-    reads well until it reaches a place anyone has heard of: Colombia has a
-    village of 61,549 called Bogota in the same region as the capital, and
-    Lithuania a hamlet called Vilnius, and qualifying all of them renamed
-    "Bogota" to "Bogota (Cundinamarca Department)" and "Vilnius" to "Vilnius
-    (Vilnius City Municipality)". Both then failed the check that a country
-    contains its own capital, which is exactly what that check is for. A bare
-    name is the answer to "which place does this name usually mean"; the
-    qualifiers answer "where is the other one".
+    Three tiers, in order:
 
-    Population decides, lowest QID breaking ties, so a rebuild cannot flip
-    which row keeps the plain name.
+    1. **The parent division.** "Aach" and "Aach (Konstanz)". Usable when the
+       parent has a name, that name is not the settlement's own, and no other
+       row in the group has the same parent name.
 
-    A row is qualified only when its parent has a name that no other row in the
-    group shares, so the qualifier always distinguishes. Where it cannot, the
-    bare name is left and counted: a qualifier that does not qualify is noise,
-    and a wrong one is worse than none.
+    2. **A compass sector within the parent**, for rows sharing one parent, so
+       no ancestor can separate them: "Bankati (north Gorakhpur)". Two villages
+       of one name in one district is ordinary -- of the pairs under a shared
+       parent, 2,775 are more than 25 km apart -- and merging them would delete
+       a real place.
+
+    3. **Nothing, so the row is dropped.** What is left has no parent at all,
+       or two parents with the same name and the same sector.
+
+    Exactly one row keeps the plain name, since one of them is what the name
+    usually means. Which one is chosen carefully: the largest, unless a row
+    cannot be qualified anyway, in which case that one takes the plain name and
+    the rest are qualified around it. Always giving it to the largest left both
+    rows bare whenever the other one was the unqualifiable one, which is how
+    2,987 groups stayed ambiguous -- a settlement named after its own
+    municipality gets no qualifier from it, and Bulgaria has a great many.
+
+    Returns the rows that survive.
     """
-    primary = min(rows, key=lambda row: (-(row.get('population') or -1), row['id']))
     labels = []
     for row in rows:
         reference = row.get('admin2_id')
         label = admin2_name(int(reference[1:])) if reference else None
-        labels.append(label if label and label != row['name'] else None)
-    counts = collections.Counter(label for label in labels if label)
-    for row, label in zip(rows, labels):
-        if row is primary:
+        labels.append(label)
+    shared = collections.Counter(label for label in labels if label)
+
+    # Tier 1 is available to a row whose parent names it distinctly.
+    tier1 = [label is not None and label != row['name'] and shared[label] == 1
+             for row, label in zip(rows, labels)]
+
+    stranded = [i for i, ok in enumerate(tier1) if not ok]
+    if len(stranded) <= 1:
+        # One row cannot be qualified, so it is the one that keeps the plain
+        # name; if every row can be, the largest keeps it.
+        primary = (stranded[0] if stranded else
+                   rows.index(min(rows, key=lambda r: (-(r.get('population') or -1), r['id']))))
+        for index, row in enumerate(rows):
+            if index != primary:
+                _apply(row, labels[index])
+        return rows
+
+    # Tier 2. Sectors are taken from the centre of the rows that need them, so
+    # they describe the spread of exactly those places.
+    lat0 = sum(float(rows[i]['latitude']) for i in stranded) / len(stranded)
+    lng0 = sum(float(rows[i]['longitude']) for i in stranded) / len(stranded)
+    sectors = {}
+    for i in stranded:
+        if labels[i]:
+            sectors[i] = '%s %s' % (_sector(rows[i], lat0, lng0), labels[i])
+    counts = collections.Counter(sectors.values())
+    resolved = [i for i in stranded if counts.get(sectors.get(i)) == 1]
+
+    # Exactly one row keeps the plain name. Preferably one that could not be
+    # qualified anyway; if the sectors covered every stranded row, the largest
+    # of them gives its sector up, so a group never comes out with all of its
+    # rows qualified and none carrying the name plainly.
+    hopeless = [i for i in stranded if i not in resolved]
+    keep = min(hopeless or stranded,
+               key=lambda i: (-(rows[i].get('population') or -1), rows[i]['id']))
+
+    for index, row in enumerate(rows):
+        if index == keep:
             continue
-        if label is None or counts[label] > 1:
-            stats['ambiguous_names'] += 1
-            continue
-        row['name'] = '%s (%s)' % (row['name'], label)
-        row['slug'] = slugify(row['name'])
+        if tier1[index]:
+            _apply(row, labels[index])
+        elif index in resolved:
+            _apply(row, sectors[index])
+
+    dropped = [i for i in hopeless if i != keep]
+    stats['ambiguous_names'] += len(dropped)
+    return [row for index, row in enumerate(rows) if index not in set(dropped)]
 
 
 def resolve_collisions(settlements, admin2_name, stats):
@@ -185,6 +252,10 @@ def resolve_collisions(settlements, admin2_name, stats):
     Same name and effectively the same position means one place upstream
     described twice, and those are merged. Same name and a real distance apart
     means two places, and those are kept and qualified.
+
+    Nothing here returns two rows a consumer cannot tell apart. That is the
+    whole point: a name identifying two places identifies neither, and a list
+    offering the same string twice makes a wrong choice look like a right one.
     """
     groups = collections.OrderedDict()
     for settlement in settlements:
@@ -198,9 +269,26 @@ def resolve_collisions(settlements, admin2_name, stats):
         merged = _merge_colocated(rows)
         stats['merged_duplicates'] += len(rows) - len(merged)
         if len(merged) > 1:
-            _qualify(merged, admin2_name, stats)
+            merged = _qualify(merged, admin2_name, stats)
         resolved.extend(merged)
-    return resolved
+
+    # A qualifier can land on a name that was already in the region, because
+    # Wikidata disambiguates some of its own labels and does it differently:
+    # "Floq (Klos)" is what this builds and "Floq, Klos" is what upstream
+    # shipped, and both slug to floq-klos. Those never met above, since they
+    # started in different groups. This is the sweep that makes the guarantee
+    # hold rather than nearly hold.
+    final = collections.OrderedDict()
+    for settlement in resolved:
+        final.setdefault(settlement['slug'], []).append(settlement)
+    unique = []
+    for rows in final.values():
+        if len(rows) == 1:
+            unique.extend(rows)
+            continue
+        stats['ambiguous_names'] += len(rows) - 1
+        unique.append(min(rows, key=lambda r: (-(r.get('population') or -1), r['id'])))
+    return unique
 
 
 def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_records,

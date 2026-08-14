@@ -15,7 +15,7 @@ outside single-zone countries. Those three have specific causes, given below.
 |---|---:|
 | countries | 255 |
 | administrative divisions | 4,329 |
-| settlements | 1,708,450 |
+| settlements | 1,706,558 |
 | with coordinates | 100% |
 
 Every row is a place Wikidata records. Nothing is synthesised to round the
@@ -129,28 +129,35 @@ about a third duplicates this way; most countries were a few percent.
 Beyond 2 km they are genuinely different places -- Germany has two towns called
 Aach 80 km apart, Russia two villages called Chekhrak 25 km apart -- and
 deleting one would delete a real place. Those are kept, and **their names are
-qualified with the division below the region**: `Aach (Konstanz)`. 214,421
-names (12.6%) carry such a qualifier.
+qualified with the division below the region**: `Aach (Konstanz)`. 224,930
+names (13.2%) carry such a qualifier.
 
 The largest of a group keeps the plain name, because a village of 61,549 called
 Bogota shares a region with the capital, and qualifying both would rename
 Bogota. So a plain name answers "which place does this name usually mean" and a
 qualifier answers "where is the other one".
 
-**12,445 rows (0.73%) still share a name with another row in the same region**,
-down from 248,712, in 9,325 groups:
+**No region contains the same name twice.** That is a guarantee, not a
+tendency, and it is why 1,892 rows are not shipped.
 
-| | groups | |
-|---|---:|---|
-| the rows share one parent | 5,123 | no ancestor can separate them |
-| parents differ, no name for one | 3,550 | fixable -- the parent is not a place this dataset keeps, so its label was never loaded |
-| a row has no parent at all | 652 | upstream gap |
+A name that identifies two places identifies neither. A consumer picking from a
+list cannot see that the choice was ambiguous, so the wrong one is taken
+silently and looks right. That makes an unidentifiable row worse than a missing
+one, and three tiers decide which it is:
 
-The first group is not a defect and merging them would be one: of the pairs
-under a shared parent, 2,775 are more than 25 km apart and only 1,482 are
-within 5 km. Two villages of the same name in one district is ordinary, and in
-Mexico, Russia, Romania and Indonesia it is common. Identity is the id; the
-name is not unique and forcing it to be would delete real places.
+| | |
+|---|---|
+| the parent division | `Aach (Konstanz)` -- used where the parent has a name of its own that no other row in the group shares |
+| a compass sector within the parent | `Bankati (north Gorakhpur)` -- for rows sharing one parent, where no ancestor can separate them. 6,203 names |
+| nothing, so the row is dropped | 1,892 rows, no parent at all or nothing that distinguishes them |
+
+Exactly one row in each group keeps the plain name, since one of them is what
+the name usually means -- the largest, unless another cannot be qualified at
+all, in which case that one takes it and the rest are qualified around it.
+
+Two villages of one name in one district is ordinary and merging them would be
+wrong: of the pairs sharing a parent, 2,775 are more than 25 km apart. Russia,
+India and Mexico account for half the dropped rows.
 
 ## The three real gaps
 
