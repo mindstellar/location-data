@@ -69,8 +69,23 @@ HARD_EXCLUDE_ROOTS = {
     # human settlement as well, so nothing softer keeps them out. A camp is
     # not a town, a heritage designation over part of a city is not a place,
     # and a layout is a drawing of one.
+    # Somewhere people are confined is not somewhere people live. Excluding
+    # the concentration camps alone left the rest of the category behind:
+    # 508 rows of Stalags, Oflags, internment camps, gulags and post-Soviet
+    # corrective colonies, all tagged Q486972 human settlement upstream.
     152081: 'concentration camp',                 # closure 35
     8343784: 'clandestine centre of detention',   # closure 8, Argentina
+    1070290: 'prisoner-of-war camp',              # closure 11, Stalag and Oflag inside it
+    5996900: 'internment camp',                   # closure 5
+    628505: 'labor camp',                         # closure 20
+    4228434: 'corrective labor colony',           # closure 1
+    #
+    # A refugee camp is the opposite case and stays. People live in them, for
+    # decades: Kutupalong holds 598,195, Nyarugusu 140,540, Rafah 138,969,
+    # Zaatari 79,000. Someone in Bangladesh, Kenya, Jordan or Palestine has to
+    # be able to select where they live, and none of the closures above
+    # reaches Q622499 -- checked, because the line between the two categories
+    # is a subclass edge away from being crossed by accident.
     66626342: 'urban ensemble',                   # closure 12
     134524402: 'urban layout',                    # closure 1
     # "A grouping of buildings planned as a unit in urban development" -- a

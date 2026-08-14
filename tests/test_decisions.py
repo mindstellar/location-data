@@ -1074,11 +1074,21 @@ class CampsAndHeritageDesignationsAreNotSettlements(unittest.TestCase):
         self.exclusions = exclusion_sets(array.array('i', []))
         self.settlement = {486972}
 
-    def test_the_five_are_excluded(self):
-        for qid in (152081, 8343784, 66626342, 134524402, 2282602):
+    def test_the_categorical_exclusions_hold(self):
+        for qid in (152081, 8343784, 66626342, 134524402, 2282602,
+                    1070290, 5996900, 628505, 4228434):
             record = {'id': 1, 'instance_of': ['Q%d' % qid, 'Q486972']}
             self.assertFalse(is_settlement(record, self.settlement, self.exclusions),
                              'Q%d should not be a settlement' % qid)
+
+    def test_a_refugee_camp_is_where_people_live(self):
+        """The opposite case to a prison camp, and a subclass edge away from
+        being swept up with it. Kutupalong holds 598,195 people, Zaatari
+        79,000; someone living there has to be able to say so."""
+        for qid in (622499, 124571059):
+            record = {'id': 4, 'instance_of': ['Q%d' % qid, 'Q486972']}
+            self.assertTrue(is_settlement(record, self.settlement, self.exclusions),
+                            'Q%d should still be a settlement' % qid)
 
     def test_a_place_people_live_in_is_not_swept_up(self):
         """An Ortsteil and an Ortslage are parts of a town that people live in

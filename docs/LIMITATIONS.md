@@ -15,7 +15,7 @@ outside single-zone countries. Those three have specific causes, given below.
 |---|---:|
 | countries | 255 |
 | administrative divisions | 4,328 |
-| settlements | 1,678,650 |
+| settlements | 1,678,070 |
 | with coordinates | 100% |
 
 Every row is a place Wikidata records. Nothing is synthesised to round the
@@ -264,11 +264,20 @@ they carry no end date, the monument designation being current.
 Four more classes are excluded the same way and for the same reason — each is
 tagged as a human settlement upstream, so nothing softer keeps it out:
 **concentration camp** (the Alderney camps shipped as Guernsey settlements),
-**clandestine centre of detention**, **urban ensemble**, **urban layout** and
+**prisoner-of-war camp** (Stalags and Oflags), **internment camp**, **labor
+camp**, **corrective labor colony**, **clandestine centre of detention**,
+**urban ensemble**, **urban layout** and
 **group of houses** — a housing estate, which is part of a town and not one:
 Polish *osiedla*, Berlin and Vienna *Wohnanlagen*, RNZAF married quarters.
 A *Wohnanlage* is named by the streets it covers, so its label is a street
 list, which is where most of the remaining absurd names came from.
+
+**A refugee camp is not in that list and will not be.** Somewhere people are
+confined is not somewhere people live; somewhere people have lived for decades
+is. Kutupalong holds 598,195, Katumba 120,000, Ifo 84,181, Zaatari 79,000, and
+someone living in one has to be able to say so. None of the exclusions above
+reaches the refugee-camp class, and a test holds that line, because the two
+categories are one subclass edge apart.
 *Archaeological site* deliberately is not: its subclass closure is 585 classes,
 79 of them settlement classes, so a categorical exclusion there would reach a
 modern city that is also an ancient one.
