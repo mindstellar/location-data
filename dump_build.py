@@ -628,6 +628,7 @@ def main():
         stats = {'orphan': 0, 'no_label': 0, 'no_coord': 0,
                  'empty_regions': 0, 'region_no_label': 0, 'coarse_regions': 0,
                  'merged_duplicates': 0, 'ambiguous_names': 0,
+                 'stripped_qualifiers': 0, 'upstream_qualifier_kept': 0,
                  'settlements_seen': seen_counts.get(iso2, 0), 'native_lang': ''}
         country = build_country(
             iso2, plan.country_qid,
@@ -678,6 +679,8 @@ def main():
             'empty_regions': stats['empty_regions'], 'native_lang': stats['native_lang'],
             'merged_duplicates': stats['merged_duplicates'],
             'ambiguous_names': stats['ambiguous_names'],
+            'stripped_qualifiers': stats['stripped_qualifiers'],
+            'upstream_qualifier_kept': stats['upstream_qualifier_kept'],
             'tier': plan.tier,
         })
         print('%-4s %-38s %5d regions %8d cities   (seen %d, orphan %d, no_label %d, '

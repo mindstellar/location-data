@@ -39,7 +39,13 @@ from contain import (  # noqa: E402
 from contracts import coord, remove_accents, slugify  # noqa: E402
 from countryblock import extra_fields  # noqa: E402
 from emit import resolve_collisions  # noqa: E402
-from naming import _strip_address, _usable, resolve_name_full, romanise  # noqa: E402
+from naming import (  # noqa: E402
+    _strip_address,
+    _usable,
+    resolve_name_full,
+    romanise,
+    strip_qualifier,
+)
 from validate import (  # noqa: E402
     BASELINE_DEFAULT,
     capital_presence,
@@ -1109,3 +1115,60 @@ class CampsAndHeritageDesignationsAreNotSettlements(unittest.TestCase):
         keeps Rome."""
         record = {'id': 2, 'instance_of': ['Q839954', 'Q486972']}
         self.assertTrue(is_settlement(record, self.settlement, self.exclusions))
+
+
+class UpstreamDisambiguationIsRedone(unittest.TestCase):
+    """Wikidata disambiguates its own labels, by a different rule and in a
+    different format. Two systems produced the collision each was meant to
+    prevent, so the parenthesis comes off and one rule puts it back."""
+
+    row = staticmethod(OneNameOnePlaceInARegion.row)
+
+    @staticmethod
+    def stats():
+        base = OneNameOnePlaceInARegion.stats()
+        base['upstream_qualifier_kept'] = 0
+        return base
+
+    def test_a_trailing_parenthesis_is_taken_off(self):
+        self.assertEqual(('Dushi', 'Baghlan Province'),
+                         strip_qualifier('Dushi (Baghlan Province)'))
+        self.assertEqual(('Floq', 'Klos'), strip_qualifier('Floq (Klos)'))
+
+    def test_a_name_with_nothing_to_strip_is_untouched(self):
+        for text in ('Aach', 'Stratford-upon-Avon', '(unnamed)', 'Y'):
+            self.assertEqual((text, None), strip_qualifier(text))
+
+    def test_the_head_must_survive_on_its_own(self):
+        """Stripping cannot leave something that is not a name."""
+        self.assertEqual(('- (Vologda)', None), strip_qualifier('- (Vologda)'))
+
+    def test_the_pipeline_requalifies_from_its_own_rule(self):
+        """Two rows upstream disambiguated differently come out matching."""
+        rows = [self.row(1, 'Floq', 40.6, 20.7, admin2='Q9', population=400),
+                self.row(2, 'Floq', 40.9, 20.9, admin2='Q8')]
+        out = resolve_collisions(rows, {8: 'Klos', 9: 'Bulqize'}.get, self.stats(), 555)
+        self.assertEqual(['Floq', 'Floq (Klos)'], [s['name'] for s in out])
+
+    def test_what_was_in_the_brackets_is_the_last_resort(self):
+        """Nothing derived from the data can tell these apart -- same parent,
+        same sector -- so the row keeps the name it already shipped with
+        rather than being dropped."""
+        rows = [self.row(1, 'Sarna', 45.0, 16.0, admin2='Q900', population=800),
+                self.row(2, 'Sarna', 45.2, 16.0, admin2='Q900')]
+        rows[1]['_upstream_qualifier'] = 'Kutina'
+        stats = self.stats()
+        out = resolve_collisions(rows, {900: 'Kutina'}.get, stats, 900)
+        self.assertEqual(2, len(out))
+        self.assertEqual(0, stats['ambiguous_names'])
+        self.assertEqual(1, stats['upstream_qualifier_kept'])
+
+    def test_the_private_key_never_reaches_a_writer(self):
+        """write_country_json serialises the whole record, so anything left on
+        a row ships in the published data."""
+        rows = [self.row(1, 'Aach', 48.4, 8.4), self.row(2, 'Aalen', 48.8, 10.0)]
+        for r in rows:
+            r['_upstream_qualifier'] = 'something'
+        out = resolve_collisions(rows, lambda q: None, self.stats(), 1)
+        for settlement in out:
+            self.assertNotIn('_upstream_qualifier', settlement)

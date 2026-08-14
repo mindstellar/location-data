@@ -35,7 +35,7 @@ from contracts import COUNTRY_NAME_OVERRIDES, coord, mean_coord, remove_accents,
 SOURCE = 'wikidata'
 from classify import is_settlement
 from countryblock import country_extra, extra_fields, official_language, parse_point
-from naming import resolve_name, resolve_name_full
+from naming import resolve_name, resolve_name_full, strip_qualifier
 
 # Two settlements in one region carry the same name for two opposite reasons.
 #
@@ -153,6 +153,12 @@ def _sector(row, lat0, lng0):
     return _SECTORS[int((degrees + 22.5) // 45) % 8]
 
 
+# Where the stripped-off upstream qualifier rides between build_country and
+# resolve_collisions. Private, and popped before the row can reach a writer:
+# write_country_json serialises the whole record, so anything left on it ships.
+_UPSTREAM = '_upstream_qualifier'
+
+
 def _apply(row, qualifier):
     row['name'] = '%s (%s)' % (row['name'], qualifier)
     row['slug'] = slugify(row['name'])
@@ -240,6 +246,19 @@ def _qualify(rows, admin2_name, stats, region_qid):
     counts = collections.Counter(sectors.values())
     resolved = [i for i in stranded if counts.get(sectors.get(i)) == 1]
 
+    # Last resort: whatever upstream had in its brackets before this stripped
+    # them off. It is used only where nothing derived from the data works, and
+    # it is exactly what the row shipped with before, so a place that cannot be
+    # told apart any other way keeps its old name instead of being dropped.
+    for i in stranded:
+        if i in resolved or not rows[i].get(_UPSTREAM):
+            continue
+        candidate = rows[i][_UPSTREAM]
+        if candidate != rows[i]['name'] and candidate not in sectors.values():
+            sectors[i] = candidate
+            resolved.append(i)
+            stats['upstream_qualifier_kept'] += 1
+
     # Exactly one row keeps the plain name. Preferably one that could not be
     # qualified anyway; if the sectors covered every stranded row, the largest
     # of them gives its sector up, so a group never comes out with all of its
@@ -300,9 +319,13 @@ def resolve_collisions(settlements, admin2_name, stats, region_qid):
     for rows in final.values():
         if len(rows) == 1:
             unique.extend(rows)
-            continue
-        stats['ambiguous_names'] += len(rows) - 1
-        unique.append(min(rows, key=lambda r: (-(r.get('population') or -1), r['id'])))
+        else:
+            stats['ambiguous_names'] += len(rows) - 1
+            unique.append(min(rows, key=lambda r: (-(r.get('population') or -1), r['id'])))
+    # Popped here and nowhere else. write_country_json serialises the whole
+    # record, so a private key left on a row ships in the published data.
+    for settlement in unique:
+        settlement.pop(_UPSTREAM, None)
     return unique
 
 
@@ -387,6 +410,15 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
                 if not clean or not slugify(clean) or not any(c.isalpha() for c in clean):
                     stats['no_label'] += 1
                     continue
+                # Upstream's own disambiguation comes off here and
+                # resolve_collisions puts back whatever is actually needed, in
+                # this dataset's one format. What was in the brackets is kept
+                # on the row as a last resort for a place nothing else can
+                # tell apart, and never reaches a writer -- resolve_collisions
+                # pops it.
+                clean, upstream_qualifier = strip_qualifier(clean)
+                if upstream_qualifier:
+                    stats['stripped_qualifiers'] += 1
                 settlement = {
                     'id': record['id'],
                     'source': SOURCE,
@@ -400,6 +432,7 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
                 }
                 settlement.update(extra_fields(record, native_lang, timezone_id,
                                                (name_lang, romanised_from) if romanised_from else None))
+                settlement[_UPSTREAM] = upstream_qualifier
                 by_region[admin1_qid].append(settlement)
 
     # Resolved lazily and only for a region that actually has a collision:

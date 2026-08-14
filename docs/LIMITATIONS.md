@@ -15,7 +15,7 @@ outside single-zone countries. Those three have specific causes, given below.
 |---|---:|
 | countries | 255 |
 | administrative divisions | 4,328 |
-| settlements | 1,678,070 |
+| settlements | 1,675,528 |
 | with coordinates | 100% |
 
 Every row is a place Wikidata records. Nothing is synthesised to round the
@@ -159,6 +159,17 @@ consumer nothing they have not already chosen -- five settlements called
 Hopewell were separated only that way -- and one named after the settlement,
 where the sector alone says as much and `Evergem (south Evergem)` becomes
 `Evergem (south)`. 308 names take the short form.
+
+**Upstream's own disambiguation is redone rather than kept.** Wikidata
+brackets some of its labels — `Dushi (Baghlan Province)`, `Floq (Klos)` — by a
+different rule and in a different format from this one, and two systems
+produced the collision each was meant to prevent: this built `Floq (Klos)`
+while upstream shipped `Floq, Klos`, and the two slugged alike. The bracket
+now comes off 17,345 labels and the tiers above put back whatever is actually
+needed. 2,077 pairs turned out to be the same place twice, within 2 km, which
+the differing brackets had been hiding. Where nothing derived from the data can
+tell two rows apart, the original bracket is put back rather than the row
+dropped — 768 of them.
 
 Exactly one row in each group keeps the plain name, since one of them is what
 the name usually means -- the largest, unless another cannot be qualified at

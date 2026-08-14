@@ -166,6 +166,35 @@ def _strip_address(text):
     return head if head and _usable(head) else text
 
 
+# A trailing parenthesis on a label is Wikidata disambiguating its own item:
+# "Dushi (Baghlan Province)", "Encamp (Andorra)", "Floq, Klos". 219,163 rows
+# carry one, and this pipeline disambiguates too, by a different rule and in a
+# different format. Two systems produced the collision they were each meant to
+# prevent -- this built "Floq (Klos)" while upstream shipped "Floq, Klos", and
+# the two slugged alike and met only in the final sweep.
+#
+# So the parenthesis comes off and resolve_collisions puts back whatever is
+# actually needed, in one format, chosen by one rule. 97,744 groups collide
+# once it is gone and 97.3% of them re-qualify from their own parent; 826 turn
+# out to be the same place twice, within 2 km, which the differing
+# parentheticals had been hiding.
+_TRAILING_PARENTHESIS = re.compile(r'^(.*?)\s*\(([^()]*)\)$')
+
+
+def strip_qualifier(text):
+    """(bare name, what was in the brackets). The second is None when there
+    was nothing to strip, and is kept by the caller as a last-resort qualifier
+    for a row that nothing else can tell apart -- 122 rows would otherwise be
+    dropped for losing the only thing that distinguished them."""
+    match = _TRAILING_PARENTHESIS.match(text)
+    if not match:
+        return text, None
+    head, inner = match.group(1).strip(), match.group(2).strip()
+    if not head or not inner or not _usable(head):
+        return text, None
+    return head, inner
+
+
 def _usable(text):
     """A label that can be a name at all: Latin script, containing a letter,
     and surviving slugification, because the slug is the identity.
