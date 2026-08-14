@@ -24,3 +24,6 @@ dump-build/
 .envrc
 r2-credentials*
 *.env.swp
+
+# Consumer-side findings, kept out of the published repo.
+docs/private/
