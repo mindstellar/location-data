@@ -32,6 +32,4 @@ UY: 852 settlements exist, 846 attach (99%). Confirmed independently against dir
 
 CR: 108 settlements exist, 99 attach (92%). The 159-city baseline exceeds what Wikidata holds for Costa Rica.
 
-CO: Not sparsity -- a one-release step from deduplication. Wikidata carries a "human settlement" item and a "municipality of Colombia" item for the same place, and this build now merges same-named rows inside a region that are within 2 km of each other. All 849 dropped rows were matched to a surviving row of the same name in the same region, median separation 154 m and none beyond 1,922 m; 832 of the 849 are exactly that class pair. Delete this entry once the release carrying the merge is the baseline, at which point the ratio is 1.0x and the gate is live for Colombia again.
 
-GT: The same one-release deduplication step as CO, with "municipality of Guatemala" as the paired class in 268 of the 274 dropped rows. All 274 matched a surviving row of the same name in the same region, median separation 338 m, none beyond 1,962 m. Delete this entry once the release carrying the merge is the baseline.
