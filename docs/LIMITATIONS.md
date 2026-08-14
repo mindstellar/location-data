@@ -15,7 +15,7 @@ outside single-zone countries. Those three have specific causes, given below.
 |---|---:|
 | countries | 255 |
 | administrative divisions | 4,329 |
-| settlements | 1,705,076 |
+| settlements | 1,683,865 |
 | with coordinates | 100% |
 
 Every row is a place Wikidata records. Nothing is synthesised to round the
@@ -254,7 +254,14 @@ is why some countries have a region with the same name as the country.
 
 **Archaeology is excluded.** Ghost towns, abandoned villages, hillforts,
 Neolithic settlements and ancient cities are not current places and are left
-out — about 30,000 rows. A modern city that is *also* an ancient one (Rome,
+out — about 50,000 rows, 20,914 of them German *Bodendenkmäler*: buried
+monuments from the state heritage registers, named by their register id
+(`Cultural heritage D-1-6933-0003 in Titting`). Those needed a categorical
+exclusion rather than the former-entity one, because Wikidata tags them as
+human settlements too — the site of a settlement two thousand years gone — and
+they carry no end date, the monument designation being current.
+
+A modern city that is *also* an ancient one (Rome,
 Athens, Damascus, Istanbul) is kept, because the rule requires every one of its
 classes to be historical.
 
@@ -274,9 +281,14 @@ defect an earlier release caused in a consumer that matched on the id alone.
   towns, provincial cities and urban districts beneath "former subdivisions of
   Vietnam". Excluding what upstream marks as former is correct, so this should
   recover on its own as Wikidata reclassifies.
-- **1,833 names are longer than 60 characters** (0.11%), the longest being a
-  249-character German housing-estate address. Truncate if your schema needs
-  to.
+- **A label over 100 characters is refused as a description**, which is the
+  same judgement the parenthesis rule makes for the bot glosses that carry one.
+  Names are short — the median is 11 characters and the 99th percentile 49 — so
+  this cannot reach a real one. It removed street lists (`Wohnsiedlung
+  Gontardweg 52; 53; 54; …`, 249 characters), Portuguese heritage ensembles,
+  Polish urban-layout register entries, and one Honduran label consisting of a
+  village name followed by a message to the author's friends. Names over 100
+  characters went from 108 to 1.
 - **Names are accent-folded.** `name` is ASCII; the unfolded form is not
   currently kept. Letters Unicode will not decompose -- Polish `ł`, Turkish
   dotless `ı`, Norwegian `ø`, Serbian `đ`, German `ß` -- are transliterated

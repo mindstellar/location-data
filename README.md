@@ -3,7 +3,7 @@
 A worldwide dataset of countries, administrative divisions and settlements,
 built from Wikidata, plus the scripts that build it.
 
-**255 countries, 4,329 administrative divisions, 1,705,076 settlements**, every
+**255 countries, 4,329 administrative divisions, 1,683,865 settlements**, every
 one with coordinates.
 
 ```bash
