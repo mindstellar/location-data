@@ -35,6 +35,7 @@ import hashlib
 import json
 import os
 import shutil
+import sys
 import tempfile
 import time
 
@@ -151,6 +152,20 @@ def main():
     countries, country_records, admin1_candidates, lang_codes = build_index(entities_dir)
     print('  %d countries by P297, %d P300-bearing divisions, %d language codes'
           % (len(countries), len(admin1_candidates), len(lang_codes)), flush=True)
+
+    # Refuse a scan taken before the country properties were extracted. Such a
+    # scan builds cleanly and produces 255 countries whose block -- capital,
+    # currency, continent, calling code, demonym, ISO alpha-3 -- is entirely
+    # null, and the counts, coordinates and per-country regressions all pass.
+    # It cost a full build and most of a debugging session to notice. Checked
+    # against the data rather than against a version stamp, so it also catches
+    # a scan written before any stamp existed.
+    with_capital = sum(1 for record in country_records.values() if record.get('capital'))
+    if country_records and with_capital < len(country_records) * 0.5:
+        sys.exit('only %d of %d country records carry P36, so this scan predates the '
+                 'country-property extraction and every country block would be null. '
+                 'Rescan, or point --scan-dir at a scan taken with the current '
+                 'dump_scan.py.' % (with_capital, len(country_records)))
 
     wanted = sorted(countries)
     if args.countries:
