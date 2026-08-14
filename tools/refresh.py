@@ -8,7 +8,7 @@ resumed by running it again rather than started over:
     cache    pull the query cache from R2 if it is not already on disk
     dump     fetch the Wikidata truthy dump if it is not already on disk
     scan     stage 1, ~90 minutes
-    build    stage 2, ~5 minutes
+    build    stage 2, ~7 minutes, keeping the last build as build.prev
     publish  validate, then upload a release and back the cache up
 
 This deliberately does not run in CI. The dump is 67 GB and the scan holds a
@@ -24,6 +24,7 @@ month in which Wikidata did not move produces no release at all.
 import argparse
 import concurrent.futures
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -186,8 +187,25 @@ def stage_scan(args):
 
 
 def stage_build(args, scan_dir):
+    """Into a fixed directory, keeping exactly one previous build beside it.
+
+    A build is about 2 GB and nothing used to remove one. Running dump_build.py
+    by hand with a fresh --out-dir each time, which is the natural way to
+    compare two runs, left 42 directories and 88 GB after three days. Two is
+    enough for the only comparison anyone actually makes -- this refresh
+    against the one before it -- and it cannot grow past that.
+
+    Rotated rather than deleted, and the rotation happens before the new build
+    starts: dump_build.py clears data/, json/ and csv/ as it begins writing, so
+    a build that fails halfway would otherwise leave nothing to fall back to.
+    """
     work = os.path.expanduser(args.work_dir)
     build_dir = os.path.join(work, 'build')
+    previous = build_dir + '.prev'
+    if os.path.isdir(build_dir):
+        shutil.rmtree(previous, ignore_errors=True)
+        os.rename(build_dir, previous)
+        print('kept the last build as %s' % previous)
     run([sys.executable, os.path.join(ROOT, 'dump_build.py'),
          '--scan-dir', scan_dir, '--out-dir', build_dir])
     return build_dir
