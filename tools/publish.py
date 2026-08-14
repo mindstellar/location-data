@@ -109,15 +109,6 @@ def publish_release(args):
         sys.exit('%s already exists. Pass --force to overwrite it, or use a '
                  'different --version.' % prefix)
 
-    # Checked before a byte is uploaded rather than after. A release that lands
-    # in the bucket and then cannot purge leaves the edge serving bytes that no
-    # longer match the manifest, and the only way back is to notice.
-    if not args.no_purge and not cdn.configured():
-        sys.exit('CF_API_TOKEN and CF_ZONE_ID are not set, so the CDN cannot be '
-                 'purged and the edge would keep serving the previous release. '
-                 'Set them in .env (see .env.example) or pass --no-purge if this '
-                 'bucket has no CDN in front of it.')
-
     files = collect(build_dir)
     total = sum(os.path.getsize(p) for p, _ in files)
     print('publishing %s -> r2://%s/%s' % (build_dir, r2.BUCKET, prefix))
@@ -153,9 +144,16 @@ def publish_release(args):
                  'releases/latest.json')
     print('published. releases/latest.json now points at %s' % version)
 
-    if args.no_purge:
-        print('CDN not purged (--no-purge). The pointer clears itself in 60s; '
-              'anything overwritten under %s does not.' % prefix)
+    # Best effort, not a precondition. A bucket does not have to have a CDN in
+    # front of it, and the release itself is already in R2 by this point --
+    # refusing to publish for want of a purge token would be refusing the thing
+    # that matters for want of the thing that follows it.
+    if args.no_purge or not cdn.configured():
+        if not args.no_purge:
+            print('CDN not purged: CF_API_TOKEN and CF_ZONE_ID are not set '
+                  '(see .env.example).')
+        print('  releases/latest.json clears itself within 60s. Anything '
+              'overwritten under %s does not -- purge it by hand.' % prefix)
         return 0
     # A new version writes paths the edge has never seen, so only the pointer
     # needs clearing. --force overwrites paths the edge is holding for 30 days

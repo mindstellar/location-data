@@ -139,10 +139,11 @@ were fixed the edge kept serving a three-hour-old pointer with `age: 10459` and
 `cache-control: max-age=60` side by side. New entries honour the new rule;
 existing ones do not.
 
-`tools/publish.py` now purges as part of every release, and refuses to publish
-at all if it cannot -- a release that lands in the bucket while the edge keeps
-serving the previous one is a release whose manifest sha256 does not match what
-anyone receives. Two variables make it work, in `.env` beside the R2 ones:
+`tools/publish.py` purges as part of every release when it can. It is best
+effort rather than a precondition -- the release is in R2 by the time the purge
+runs, and a bucket does not have to have a CDN in front of it -- so without
+credentials it says so and carries on. Two variables turn it on, in `.env`
+beside the R2 ones:
 
 ```
 CF_API_TOKEN    a token with Zone.Cache Purge, scoped to this zone alone
@@ -165,8 +166,11 @@ POST /zones/<zone>/purge_cache   {"hosts": ["geo.mindstellar.com"]}
 By hostname rather than `purge_everything`, which would throw away the cache of
 every other site in the `mindstellar.com` zone. Every purge method became
 available on all Cloudflare plans in April 2025, so this works on the Free plan
-this zone is on. `--no-purge` skips it, and is only correct for a bucket with
-no CDN in front of it.
+this zone is on. `--no-purge` skips it even when the credentials are present.
+
+When nothing purged, `releases/latest.json` clears itself within 60 seconds and
+the release becomes visible on its own. A `--force` republish does not: those
+paths are held for 30 days and need purging by hand.
 
 After changing a cache rule, purge by hand -- publish only purges what it
 wrote, and a rule change affects everything already cached.
