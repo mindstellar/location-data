@@ -1081,9 +1081,13 @@ class CampsAndHeritageDesignationsAreNotSettlements(unittest.TestCase):
                              'Q%d should not be a settlement' % qid)
 
     def test_a_place_people_live_in_is_not_swept_up(self):
-        """An Ortsteil and a neighbourhood are parts of a town that people
-        give as their address. A housing estate is not."""
-        for qid in (253019, 123705, 1669338):
+        """An Ortsteil and an Ortslage are parts of a town that people live in
+        and give as their address, and they stay. A housing estate does not.
+
+        A neighbourhood is not in this list: it is excluded elsewhere and
+        deliberately, being informal, overlapping and without postal
+        identity."""
+        for qid in (253019, 1669338):
             record = {'id': 3, 'instance_of': ['Q%d' % qid, 'Q486972']}
             self.assertTrue(is_settlement(record, self.settlement, self.exclusions),
                             'Q%d should still be a settlement' % qid)
