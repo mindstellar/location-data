@@ -1,6 +1,6 @@
 """Publish a build to R2 as a release, and back the query cache up beside it.
 
-    python tools/publish.py release <build-dir> [--version 2026-08-13]
+    python tools/publish.py release <build-dir> [--version 2026-08-14T0446Z]
     python tools/publish.py cache <cache-dir>
     python tools/publish.py status
 
@@ -24,11 +24,17 @@ decompressing. 1.9 GB of storage is about three cents a month and egress is
 free. See docs/RELEASING.md for why gzip is not used and what to do instead if
 the consumer's bandwidth ever matters more.
 
+<version> is the UTC time to the minute, so every release is its own immutable
+prefix and publishing twice in a day does not overwrite anything. That matters
+at the edge rather than in the bucket: release paths are cached for 30 days
+with nothing to expire them, so an overwritten path serves bytes that no longer
+match the manifest's sha256.
+
 Publishing is idempotent in the way that matters: the build is byte
 deterministic, so a rebuild over an unchanged Wikidata state produces the same
-s_version, and this refuses to publish a version that is already there unless
-told to overwrite. That is what keeps a monthly refresh from minting releases
-that contain nothing new.
+s_version, and this refuses to publish it whatever the path would have been
+called. That is what keeps a monthly refresh from minting releases that contain
+nothing new.
 """
 
 import argparse
@@ -66,6 +72,22 @@ which is a mechanical transformation of CC0 input and carries no new rights.
 MANIFEST = 'manifest.json'
 
 
+def default_version():
+    """The release path, to the minute rather than to the day.
+
+    A date alone collides with itself the second time you publish in one day,
+    and the only way past a collision is --force, which overwrites paths the
+    CDN is holding for 30 days with nothing to expire them. Minutes make every
+    release its own immutable prefix, so the overwrite case stops arising and
+    a purge is only ever needed for the pointer.
+
+    UTC, matching the 'released' stamp. Seconds would be false precision: a
+    build takes seven minutes and an upload several more.
+    """
+    return (datetime.datetime.now(datetime.timezone.utc)
+                    .strftime('%Y-%m-%dT%H%MZ'))
+
+
 def build_version(build_dir):
     with open(os.path.join(build_dir, MANIFEST), encoding='utf-8') as handle:
         return json.load(handle)['version']
@@ -96,7 +118,7 @@ def publish_release(args):
         sys.exit('%s has no %s -- is it a build directory?' % (build_dir, MANIFEST))
 
     s_version = build_version(build_dir)
-    version = args.version or datetime.date.today().isoformat()
+    version = args.version or default_version()
     prefix = 'releases/%s' % version
 
     existing = r2.read_json('releases/latest.json')
@@ -105,7 +127,12 @@ def publish_release(args):
               % (existing.get('version'), s_version))
         print('the build is deterministic, so this means Wikidata has not moved.')
         return 0
-    if r2.exists('%s/json-list.json' % prefix) and not args.force:
+    # MANIFEST, not the json-list.json this used to look for -- that name came
+    # from the layout this replaced and no build has written it since, so the
+    # guard never fired. A second publish on one day would have overwritten the
+    # first silently, without --force being involved at all, which is the one
+    # way to leave the edge holding bytes that no longer match the manifest.
+    if r2.exists('%s/%s' % (prefix, MANIFEST)) and not args.force:
         sys.exit('%s already exists. Pass --force to overwrite it, or use a '
                  'different --version.' % prefix)
 
@@ -236,7 +263,8 @@ def main():
         node = sub.add_parser(name)
         if needs_path:
             node.add_argument('path')
-            node.add_argument('--version', help='defaults to today')
+            node.add_argument('--version',
+                              help='defaults to the UTC time to the minute')
             node.add_argument('--force', action='store_true')
             node.add_argument('--dry-run', action='store_true')
         if name == 'release':

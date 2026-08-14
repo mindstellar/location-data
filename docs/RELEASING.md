@@ -221,8 +221,20 @@ python tools/publish.py release <build-dir>
 python tools/publish.py cache ~/development/wikidata-cache-backup
 ```
 
-`--version` defaults to today's date. `--force` overwrites an existing version,
-and is the only way to replace a release rather than add one.
+`--version` defaults to the current UTC time to the minute -- `2026-08-14T0446Z`
+-- not to the date. A date collides with itself the second time you publish in
+one day, and the only way past a collision is `--force`, which overwrites paths
+the CDN is holding for 30 days with nothing to expire them. To the minute,
+every release is its own immutable prefix and that case stops arising.
+
+`--force` overwrites an existing version and is the only way to replace a
+release rather than add one. It should now be close to unreachable; if you do
+use it, the purge matters, which is the one thing the credentials below are
+genuinely needed for.
+
+A publish still does nothing when the build has not moved: that check is on
+`s_version`, which comes from the content hashes, so a rebuild over unchanged
+Wikidata is refused whatever the path would have been called.
 
 ## Access
 
