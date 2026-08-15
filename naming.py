@@ -151,7 +151,11 @@ _MAX_NAME = 100
 _ADDRESS_TAIL = re.compile(
     r'\b(district|oblast|krai|okrug|raion|rayon|selsoviet|sel.soviet|'
     r'rural settlement|urban settlement|municipality|county|province|region|'
-    r'prefecture|voivodeship|governorate|department|commune|canton)\b',
+    r'prefecture|voivodeship|governorate|department|commune|canton|'
+    # "state" was missing from this list, which is why Nigerian and Indian
+    # addresses kept their whole chain: "Abiriba Post Office, Abiriba, Ohafia,
+    # Abia State".
+    r'state|emirate|subdistrict|sub-district|taluk|tehsil|mandal|upazila)\b',
     re.IGNORECASE)
 
 
@@ -182,6 +186,12 @@ def strip_qualifier(text):
     What was inside is returned so the caller can put it back on a row that
     nothing else can tell apart, rather than dropping it. That saved 768 rows.
 
+    Square brackets are the same thing and were missed at first: Mexico's
+    statistical office tags its rows "[Nuevo Centro de Poblacion]" and
+    "[Sociedad Productora Rural]", and German labels disambiguate with
+    "Baumgarten [Sonnenberg]". 4,507 rows, most of them short enough that no
+    length check would ever have found them.
+
     The opening bracket is found by counting depth from the end rather than by
     matching a flat "(...)$", because the contents can contain brackets of
     their own -- "Eichholz (Werder (Havel))", where Werder (Havel) is itself a
@@ -189,24 +199,53 @@ def strip_qualifier(text):
     oblysy))". A flat pattern silently leaves those whole; 93 rows shipped that
     way.
     """
-    if not text.endswith(')'):
-        return text, None
-    depth = 0
-    for index in range(len(text) - 1, -1, -1):
-        if text[index] == ')':
-            depth += 1
-        elif text[index] == '(':
-            depth -= 1
-            if depth == 0:
-                break
-    else:
-        return text, None
-    if depth:
-        return text, None
-    head, inner = text[:index].strip(), text[index + 1:-1].strip()
-    if not head or not inner or not _usable(head):
-        return text, None
-    return head, inner
+    for opening, closing in (('(', ')'), ('[', ']')):
+        if not text.endswith(closing):
+            continue
+        depth = 0
+        for index in range(len(text) - 1, -1, -1):
+            if text[index] == closing:
+                depth += 1
+            elif text[index] == opening:
+                depth -= 1
+                if depth == 0:
+                    break
+        else:
+            continue
+        if depth:
+            continue
+        head, inner = text[:index].strip(), text[index + 1:-1].strip()
+        if head and inner and _usable(head):
+            return head, inner
+    return text, None
+
+
+# A Russian administrative formation described rather than named:
+#
+#   Gorodskoe poselenie <<Gorod Zavitinsk>>          urban settlement "town of Zavitinsk"
+#   Munitsipal'noe obrazovanie <<Rabochiy poselok (pgt) Arkhara>>
+#
+# The name is inside the guillemets and the wrapper is a description of what
+# kind of administrative unit it is. 1,830 rows.
+_GUILLEMETS = re.compile(r'^.*?<<\s*(.+?)\s*>>\s*$')
+
+# What is left inside is still often prefixed by the kind of place it is, in
+# Russian: "Gorod X" (town), "Selo X" (village), "Rabochiy poselok X".
+_RUSSIAN_KIND = re.compile(
+    r'^(gorod|selo|derevnya|posyolok|poselok|rabochiy poselok|'
+    r'pgt|stanitsa|khutor|aul|slobod[ak])\s+', re.IGNORECASE)
+
+
+def strip_description(text):
+    """The name inside a description of it, or the text unchanged."""
+    match = _GUILLEMETS.match(text)
+    if not match:
+        return text
+    inner = match.group(1).strip()
+    # "(pgt)" and the like sit between the kind and the name.
+    inner = re.sub(r'\s*\([^()]*\)\s*', ' ', inner).strip()
+    inner = _RUSSIAN_KIND.sub('', inner).strip()
+    return inner if inner and _usable(inner) else text
 
 
 def _usable(text):
@@ -336,7 +375,7 @@ def resolve_name_full(record, native_lang):
                       _plain(candidates, clean)):
             if found:
                 name, lang, source = found
-                return _strip_address(name), lang, source
+                return _strip_address(strip_description(name)), lang, source
 
     # Nothing usable and nothing that can honestly be romanised -- an Arabic
     # label, or a label that is punctuation. Returning the first candidate

@@ -15,7 +15,7 @@ outside single-zone countries. Those three have specific causes, given below.
 |---|---:|
 | countries | 255 |
 | administrative divisions | 4,328 |
-| settlements | 1,675,528 |
+| settlements | 1,674,947 |
 | with coordinates | 100% |
 
 Every row is a place Wikidata records. Nothing is synthesised to round the
@@ -171,7 +171,15 @@ the differing brackets had been hiding. The parent's own bracket comes off
 before it is used to qualify, since a qualifier is a reference to the parent
 rather than a rename of it: `Lindow (Mark)` and `Werder (Havel)` qualify as
 `Lindow` and `Werder`, which distinguishes exactly as well inside one region
-and does not put brackets inside brackets. Where nothing derived from the data can
+and does not put brackets inside brackets.
+
+Square brackets are the same thing and were missed at first -- Mexico's
+statistical office tags rows `[Nuevo Centro de Poblacion]`, German labels
+disambiguate as `Baumgarten [Sonnenberg]`, 4,507 rows, most of them too short
+for any length check to have found. A Russian administrative formation is
+labelled by what kind of unit it is with the name inside guillemets --
+`Gorodskoe poselenie <<Gorod Zavitinsk>>` is Zavitinsk -- which is another
+1,830. Where nothing derived from the data can
 tell two rows apart, the original bracket is put back rather than the row
 dropped — 768 of them.
 

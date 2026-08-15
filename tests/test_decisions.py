@@ -44,6 +44,7 @@ from naming import (  # noqa: E402
     _usable,
     resolve_name_full,
     romanise,
+    strip_description,
     strip_qualifier,
 )
 from validate import (  # noqa: E402
@@ -1205,3 +1206,50 @@ class AQualifierIsAReferenceNotARename(unittest.TestCase):
                          [s['name'] for s in out])
         for settlement in out:
             self.assertNotIn('((', settlement['name'])
+
+
+class SquareBracketsAreBracketsToo(unittest.TestCase):
+    """Built for "(...)" and nothing else at first, which left 4,507 rows --
+    most of them short enough that no length check would ever find them."""
+
+    def test_a_square_bracket_qualifier_comes_off(self):
+        self.assertEqual(('Baumgarten', 'Sonnenberg'),
+                         strip_qualifier('Baumgarten [Sonnenberg]'))
+        self.assertEqual(('Antorchistas', 'Fraccionamiento'),
+                         strip_qualifier('Antorchistas [Fraccionamiento]'))
+
+    def test_round_brackets_still_work(self):
+        self.assertEqual(('Dushi', 'Baghlan Province'),
+                         strip_qualifier('Dushi (Baghlan Province)'))
+
+    def test_an_unbalanced_square_bracket_is_left_alone(self):
+        self.assertEqual(('A [B', None), strip_qualifier('A [B'))
+
+
+class ADescriptionOfAPlaceIsNotItsName(unittest.TestCase):
+    """Russian administrative formations are labelled by what kind of unit
+    they are, with the name inside guillemets."""
+
+    def test_the_name_comes_out_of_the_guillemets(self):
+        self.assertEqual('Zavitinsk',
+                         strip_description('Gorodskoe poselenie <<Gorod Zavitinsk>>'))
+        self.assertEqual('Chikshino', strip_description(
+            "Munitsipal'noe obrazovanie sel'skogo poseleniya <<Chikshino>>"))
+
+    def test_the_kind_of_place_is_dropped_with_its_abbreviation(self):
+        self.assertEqual('Arkhara', strip_description(
+            "Munitsipal'noe obrazovanie <<Rabochiy poselok (pgt) Arkhara>>"))
+
+    def test_a_plain_name_is_untouched(self):
+        for text in ('Zavitinsk', 'Aach', 'Washington, D.C.'):
+            self.assertEqual(text, strip_description(text))
+
+
+class AnAddressCanEndInAState(unittest.TestCase):
+    def test_a_nigerian_address_is_cut_to_its_head(self):
+        self.assertEqual('Abiriba Post Office', _strip_address(
+            'Abiriba Post Office, Abiriba, Ohafia, Abia State'))
+
+    def test_a_real_name_still_keeps_its_comma(self):
+        for text in ('Washington, D.C.', 'Frankfurt, Oder'):
+            self.assertEqual(text, _strip_address(text))
