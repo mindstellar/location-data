@@ -1135,6 +1135,21 @@ class UpstreamDisambiguationIsRedone(unittest.TestCase):
                          strip_qualifier('Dushi (Baghlan Province)'))
         self.assertEqual(('Floq', 'Klos'), strip_qualifier('Floq (Klos)'))
 
+    def test_brackets_inside_brackets_are_handled(self):
+        """The contents can contain brackets of their own -- Werder (Havel) is
+        a place name. A flat "(...)$" pattern leaves these whole, and 93 rows
+        shipped that way."""
+        self.assertEqual(('Eichholz', 'Werder (Havel)'),
+                         strip_qualifier('Eichholz (Werder (Havel))'))
+        self.assertEqual(
+            ('Leonidovka', 'Korneev auyldyq okrugi (Soltustik Qazaqstan oblysy)'),
+            strip_qualifier(
+                'Leonidovka (Korneev auyldyq okrugi (Soltustik Qazaqstan oblysy))'))
+
+    def test_an_unbalanced_bracket_is_left_alone(self):
+        for text in ('Broken (bracket', '(unnamed)', 'A (B'):
+            self.assertEqual((text, None), strip_qualifier(text))
+
     def test_a_name_with_nothing_to_strip_is_untouched(self):
         for text in ('Aach', 'Stratford-upon-Avon', '(unnamed)', 'Y'):
             self.assertEqual((text, None), strip_qualifier(text))
@@ -1172,3 +1187,21 @@ class UpstreamDisambiguationIsRedone(unittest.TestCase):
         out = resolve_collisions(rows, lambda q: None, self.stats(), 1)
         for settlement in out:
             self.assertNotIn('_upstream_qualifier', settlement)
+
+
+class AQualifierIsAReferenceNotARename(unittest.TestCase):
+    """The parent's own bracket comes off before it is used to qualify, so a
+    qualifier never puts brackets inside brackets."""
+
+    row = staticmethod(OneNameOnePlaceInARegion.row)
+    stats = staticmethod(UpstreamDisambiguationIsRedone.stats)
+
+    def test_a_bracketed_parent_qualifies_by_its_short_name(self):
+        rows = [self.row(1, 'Hindenberg', 53.0, 12.9, admin2='Q1', population=90),
+                self.row(2, 'Hindenberg', 52.6, 12.9, admin2='Q2')]
+        out = resolve_collisions(rows, {1: 'Lindow', 2: 'Werder'}.get,
+                                 self.stats(), 555)
+        self.assertEqual(['Hindenberg', 'Hindenberg (Werder)'],
+                         [s['name'] for s in out])
+        for settlement in out:
+            self.assertNotIn('((', settlement['name'])

@@ -167,7 +167,11 @@ produced the collision each was meant to prevent: this built `Floq (Klos)`
 while upstream shipped `Floq, Klos`, and the two slugged alike. The bracket
 now comes off 17,345 labels and the tiers above put back whatever is actually
 needed. 2,077 pairs turned out to be the same place twice, within 2 km, which
-the differing brackets had been hiding. Where nothing derived from the data can
+the differing brackets had been hiding. The parent's own bracket comes off
+before it is used to qualify, since a qualifier is a reference to the parent
+rather than a rename of it: `Lindow (Mark)` and `Werder (Havel)` qualify as
+`Lindow` and `Werder`, which distinguishes exactly as well inside one region
+and does not put brackets inside brackets. Where nothing derived from the data can
 tell two rows apart, the original bracket is put back rather than the row
 dropped — 768 of them.
 

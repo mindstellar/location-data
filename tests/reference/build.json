@@ -477,9 +477,9 @@
       "cities": 94014,
       "name": "Germany",
       "regions": 17,
-      "sha256_csv": "028d820d9b0786c2d9fa0de04d791454b9d77d6fb726e34925da3dbbbc30cb69",
-      "sha256_data": "a7b5bad3ba52c70ea705b6e07152ec4511dca095e89f54cb7bf12592cf1f62f3",
-      "sha256_json": "f55a42f77caf87020b2d6fe697673f3a197bb4dddbb43f2203e84b6cd5b576d3"
+      "sha256_csv": "8c15ac8c0dcd363104324cfcbe561574f9c2b35ddf60b89554a135b8af90c946",
+      "sha256_data": "427c4b51126cdbd68a26457a4cc1abf802ab193e0c25c1c9d853cfc2dd1c3856",
+      "sha256_json": "14d0c015c2042128b395eba38c50ca2643938b127a80786f43c70798a352e17c"
     },
     "DG": {
       "cities": 0,
@@ -893,9 +893,9 @@
       "cities": 51169,
       "name": "Iran",
       "regions": 32,
-      "sha256_csv": "c1439b23942240e5b7e9b0e2aaf52a79a7c7755f34a87457f6732cab1e2e8ef9",
-      "sha256_data": "cab945448501b96766afe1fd85bb0f464b0b86b2c53b78ee7ebb3ac350bb89a0",
-      "sha256_json": "e444b087a2936207e6329bdbd6ae2f7a02fe093f8665bee87bd593c57f727978"
+      "sha256_csv": "8f0c1d33cb13d5263f40131663a8e98b41135e1b5265014ec0d2998505f37137",
+      "sha256_data": "d7379cd6c5f1a3daad77a7083a1b29a0cdfbbafa1a0269a8aa4df0c56ab9e465",
+      "sha256_json": "1bd20d4495b48808d0c5e2eb9d6a324de5ce9dcfe4f2b099659c6f4d4cf60aab"
     },
     "IS": {
       "cities": 240,
@@ -1029,9 +1029,9 @@
       "cities": 7586,
       "name": "Kazakhstan",
       "regions": 21,
-      "sha256_csv": "3f8c956027ea000b12f796a853392f80df02b4d6492767479b2c40c1a1045bce",
-      "sha256_data": "a987a8d4de13991464784f9a0ea85c692bcbbad52ce4235ca9cd2ceccea0f5d0",
-      "sha256_json": "aa4232a5553b6a72af48c34450ef0ae00e3b25e914c1268ff5cc58da3dd5d37f"
+      "sha256_csv": "2bdc6079a8106f89c3e9a3045ccb8d72356f92490133e19985918f59794c3657",
+      "sha256_data": "6640564edf3ccddc1a42ddb0083840030d805e88835f60c3a609fa5dfdda4c43",
+      "sha256_json": "c5bd4a1e95f56e68075a9e1fe2ac39f54dc3d2ec84f0ed7da9b6231f2886a047"
     },
     "LA": {
       "cities": 224,
@@ -1557,9 +1557,9 @@
       "cities": 157581,
       "name": "Russia",
       "regions": 81,
-      "sha256_csv": "efc29d5f29ad8e7dd3b67ac36536d7f5b27556655a010b6292b3b9ccb6e2e7ff",
-      "sha256_data": "ba46f086a62df0cd42a519ec6e9c486b874690d47147b30238f844677197a163",
-      "sha256_json": "1959929f7976e6d7d0df11065d06c18c1416b612704b5880eb1db1ca9f9bfb9d"
+      "sha256_csv": "a0c69655cf9a8cf44f95664e75e627e938da9db45b3f355d927443d0803333e5",
+      "sha256_data": "38614cf394436862fc330cac183d176bb86a2aaab87f8634fe69238c8a6d453f",
+      "sha256_json": "b405a90c14943a560335d3fa3f7635267f6094a7fd32758d651e7eff310f7c9b"
     },
     "RW": {
       "cities": 92,
@@ -1837,9 +1837,9 @@
       "cities": 44053,
       "name": "Turkey",
       "regions": 82,
-      "sha256_csv": "0e6d62d32832d09e3ff2b106b77821a8ab12257c336dd78334d72d8c816c6007",
-      "sha256_data": "7f36c36e280e12b96e9a4f4fe3497938b969f64c564979a2c62949aa977fc413",
-      "sha256_json": "e3489fee8ebcbe9ffb2eee8c16e8a65d9cb9502a586f641dd35e32ab89dfa524"
+      "sha256_csv": "564df13788356a256d769a41259625d718b6c481cf158307f0a7011707739b1c",
+      "sha256_data": "a9d115c828bbd0a67e11d49083bcabf6ab72199c8c6f941d48335b8a78ab7480",
+      "sha256_json": "007b933fbbd2d641333e676ff00019ff8819237fa8db188237c666fd90c093eb"
     },
     "TT": {
       "cities": 597,
@@ -1877,9 +1877,9 @@
       "cities": 33260,
       "name": "Ukraine",
       "regions": 28,
-      "sha256_csv": "cdc4425310068582c763383c6138ed91565f52f88c5607145b95a287018503b4",
-      "sha256_data": "33efe77a1b884025c25dd3a62d42b4d46de44831aeb88a24023cf43b5a2bb7e8",
-      "sha256_json": "b53ff05c2c5f40469671535c0363822d0545589262d323858624b26922019bbe"
+      "sha256_csv": "ce83c9ef3862882d89502a69ee28bf74aa70de66e2945b6b806ea94f96c0e04f",
+      "sha256_data": "a7b2fe8ad4832a94ba891ce2918fa7b13d9c317aa99810d891434d6313bdcfa8",
+      "sha256_json": "df8faf9bcef6ee1be09b966f6509643c5ed3323d3a08c88f259ea2597edf1a48"
     },
     "UG": {
       "cities": 816,
@@ -2046,5 +2046,5 @@
   "regions_total": 4328,
   "s_license": "CC0-1.0",
   "s_source": "https://www.wikidata.org/ (Wikidata truthy dump, CC0)",
-  "s_version": "6e5c77ba74d2db86"
+  "s_version": "562db96d3774bf6e"
 }

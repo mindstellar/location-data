@@ -442,10 +442,26 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
     admin2_cache = {}
 
     def admin2_name(qid):
+        """The parent's name, short enough to be a qualifier.
+
+        Its own trailing bracket comes off, for the same reason the
+        settlement's does and with an extra one: a qualifier is a reference to
+        the parent, not a rename of it, so the shortest form that still points
+        at the parent is the right one. "Leonidovka (Korneev auyldyq okrugi
+        (Soltustik Qazaqstan oblysy))" becomes "Leonidovka (Korneev auyldyq
+        okrugi)", and the German municipalities whose official names carry a
+        river or region -- Lindow (Mark), Werder (Havel), Homberg (Ohm) --
+        qualify as Lindow, Werder and Homberg, which distinguishes exactly as
+        well inside a single region.
+
+        Without this the qualifier put brackets inside brackets, which is where
+        every remaining nested name came from once the labels were cleaned.
+        """
         if qid not in admin2_cache:
             record = admin2_records.get(qid)
             name, _lang = resolve_name(record, native_lang) if record else (None, None)
-            admin2_cache[qid] = (remove_accents(name).strip() or None) if name else None
+            name = (remove_accents(name).strip() or None) if name else None
+            admin2_cache[qid] = strip_qualifier(name)[0] if name else None
         return admin2_cache[qid]
 
     for admin1_qid in list(by_region):
