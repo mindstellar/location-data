@@ -41,6 +41,24 @@ curl -s --compressed https://geo.mindstellar.com/releases/<version>/json/MT.json
 version and its manifest; everything else hangs off that. Use `--compressed` —
 the edge compresses on the fly, and Mexico is 76 MB if you don't.
 
+## If you would rather not host it
+
+Self-hosting is the point and always will be: the files above are the whole
+dataset, and nothing here depends on a service staying up.
+
+But if you only want a country list in a dropdown,
+**[placedb.org](https://placedb.org)** serves these releases as static JSON —
+countries, divisions, settlements and prefix buckets for autocomplete — with no
+key, no account and no rate limit.
+
+```bash
+curl -s https://api.placedb.org/v1/countries.json
+```
+
+It is built from these releases and adds nothing to them; every response names
+the release it came from. It is a separate project, so that this one never has
+to qualify the licence below.
+
 ## What a row looks like
 
 ```json
