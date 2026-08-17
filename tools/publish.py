@@ -24,6 +24,14 @@ decompressing. 1.9 GB of storage is about three cents a month and egress is
 free. See docs/RELEASING.md for why gzip is not used and what to do instead if
 the consumer's bandwidth ever matters more.
 
+A release also tags the pipeline commit that produced it and opens a GitHub
+release pointing at the data, because the dataset's headline property is that
+the same Wikidata state and the same code produce the same bytes -- which is
+only checkable if you know which code. The tag is named for the release, so the
+git tag and the bucket prefix are the same string. Nothing is attached to the
+GitHub release: 1.8 GB of data belongs where a consumer can fetch one country
+of it.
+
 <version> is the UTC time to the minute, so every release is its own immutable
 prefix and publishing twice in a day does not overwrite anything. That matters
 at the edge rather than in the bucket: release paths are cached for 30 days
@@ -47,6 +55,8 @@ import tarfile
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# The repository, not tools/: git and gh both have to run from it.
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 import cdn  # noqa: E402
 import r2  # noqa: E402
@@ -112,6 +122,126 @@ def collect(build_dir):
     return out
 
 
+# The pipeline files whose contents decide what the build produces. A tag
+# claims "this code made that data", so it is only honest if these match the
+# tree the build ran from.
+BUILD_FILES = ('classify.py', 'contain.py', 'contracts.py', 'countryblock.py',
+               'emit.py', 'naming.py', 'dump_build.py', 'dump_scan.py')
+
+RELEASE_NOTES = """\
+**%(countries)d countries · %(regions)s administrative divisions · \
+%(settlements)s settlements**, every one with coordinates.
+
+`s_version` **`%(s_version)s`** -- the content fingerprint. The build is byte
+deterministic, so this tag plus the same Wikidata dump reproduces it exactly.
+
+### Getting the data
+
+The data is **not attached here**. It is %(gb).1f GB across %(files)d files and lives in
+object storage, where a consumer can fetch one country instead of all of them:
+
+```bash
+curl -s %(host)s/releases/latest.json
+curl -s --compressed %(host)s/releases/%(version)s/manifest.json
+curl -s --compressed %(host)s/releases/%(version)s/json/MT.json
+```
+
+Every file's sha256 is in the manifest. Three formats per country:
+`data/<CC>.ndjson` to stream, `json/<CC>.json` nested, `csv/<CC>.csv` flat.
+
+### What this tag is for
+
+The dataset's headline property is that the same Wikidata state and the same
+code produce the same bytes. That is only checkable if you know which code --
+this tag is that link.
+
+### Licence
+
+Data **CC0-1.0**. Pipeline **GPL-3.0**.
+"""
+
+
+def _git(*args):
+    """Run git and return stdout, or None if it fails or git is absent."""
+    try:
+        done = subprocess.run(('git',) + args, cwd=ROOT, capture_output=True, text=True)
+    except OSError:
+        return None
+    return done.stdout.strip() if done.returncode == 0 else None
+
+
+def tag_release(version, pointer):
+    """Tag the pipeline commit that produced this data and open a GitHub
+    release for it.
+
+    Best effort, and deliberately after the upload: the data is already in R2,
+    and a missing tag is a missing cross-reference rather than a broken
+    release. Publishing from a clone without push rights, or without gh, is a
+    normal thing to do.
+
+    The tag is named for the release, not vN.N.N, so the git tag and the bucket
+    prefix are the same string and there is no mapping to keep.
+    """
+    if _git('rev-parse', '--git-dir') is None:
+        print('not a git checkout, so no tag was made')
+        return
+
+    # A tag on a dirty pipeline claims something untrue: the commit it points
+    # at is not what built the data. Everything else -- README, docs, the
+    # allowlist -- can be dirty without affecting a byte of output.
+    dirty = _git('status', '--porcelain', '--', *BUILD_FILES)
+    if dirty:
+        print('NOT tagging: the pipeline has uncommitted changes, so no commit '
+              'describes what built this release.')
+        for line in dirty.splitlines():
+            print('    %s' % line)
+        return
+
+    if _git('rev-parse', '-q', '--verify', 'refs/tags/%s' % version) is not None:
+        print('tag %s already exists' % version)
+        return
+
+    message = ('Data release %s (s_version %s)\n\n'
+               '%d countries, %s administrative divisions, %s settlements.\n\n'
+               'This is the pipeline commit that produced that data.'
+               % (version, pointer['s_version'], pointer['countries'],
+                  '{:,}'.format(pointer['regions']),
+                  '{:,}'.format(pointer['settlements'])))
+    if _git('tag', '-a', version, '-m', message) is None:
+        print('could not create the tag')
+        return
+    print('tagged %s' % version)
+
+    if _git('push', 'origin', version) is None:
+        print('  tag made locally but not pushed -- push it when you have rights')
+        return
+    print('  pushed')
+
+    notes = RELEASE_NOTES % {
+        'countries': pointer['countries'],
+        'regions': '{:,}'.format(pointer['regions']),
+        'settlements': '{:,}'.format(pointer['settlements']),
+        's_version': pointer['s_version'],
+        'version': version,
+        'gb': pointer['bytes'] / 1e9,
+        'files': pointer.get('files') or 768,
+        'host': 'https://%s' % cdn.PUBLIC_HOST,
+    }
+    title = '%s — %s settlements' % (version, '{:,}'.format(pointer['settlements']))
+    try:
+        done = subprocess.run(
+            ['gh', 'release', 'create', version, '--title', title,
+             '--notes-file', '-', '--verify-tag'],
+            cwd=ROOT, input=notes, capture_output=True, text=True)
+    except OSError:
+        print('  gh is not installed, so no GitHub release was opened')
+        return
+    if done.returncode:
+        print('  gh could not open the release: %s' % done.stderr.strip().splitlines()[-1:])
+        return
+    print('  release %s' % done.stdout.strip())
+
+
 def publish_release(args):
     build_dir = args.path
     manifest_path = os.path.join(build_dir, MANIFEST)
@@ -171,6 +301,9 @@ def publish_release(args):
     r2.put_bytes(json.dumps(pointer, indent=2, sort_keys=True).encode('utf-8'),
                  'releases/latest.json')
     print('published. releases/latest.json now points at %s' % version)
+
+    if not args.no_tag:
+        tag_release(version, pointer)
 
     # Best effort, not a precondition. A bucket does not have to have a CDN in
     # front of it, and the release itself is already in R2 by this point --
@@ -272,6 +405,8 @@ def main():
             node.add_argument('--no-purge', action='store_true',
                               help='skip the CDN purge (only correct if no CDN '
                                    'is in front of this bucket)')
+            node.add_argument('--no-tag', action='store_true',
+                              help='skip the git tag and GitHub release')
         node.set_defaults(handler=handler)
     args = parser.parse_args()
     return args.handler(args)

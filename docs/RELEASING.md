@@ -227,6 +227,21 @@ one day, and the only way past a collision is `--force`, which overwrites paths
 the CDN is holding for 30 days with nothing to expire them. To the minute,
 every release is its own immutable prefix and that case stops arising.
 
+A release also **tags the pipeline commit that produced it** and opens a GitHub
+release pointing at the data. The dataset's headline property is that the same
+Wikidata state and the same code produce the same bytes, and that is only
+checkable if you know which code -- the tag is that link. It is named for the
+release, so the git tag and the bucket prefix are the same string.
+
+Nothing is attached to the GitHub release. 1.8 GB across 768 files belongs
+where a consumer can fetch one country of it, and the notes point there.
+
+The tag is best effort and comes after the upload: the data is already in R2,
+and publishing from a clone without push rights or without `gh` is a normal
+thing to do. It refuses in one case rather than lying -- if any of the pipeline
+files is uncommitted, no commit describes what built the release, so no tag is
+made. `--no-tag` skips it entirely.
+
 `--force` overwrites an existing version and is the only way to replace a
 release rather than add one. It should now be close to unreachable; if you do
 use it, the purge matters, which is the one thing the credentials below are
