@@ -1,6 +1,8 @@
-# CLAUDE.md
+# Working in this repository
 
-Guidance for working in this repository.
+What the pipeline decides, where each decision lives, and the traps that
+have already been hit. Read this before changing a rule -- most of what
+looks like a simplification here was tried and reverted.
 
 ## What this is
 
