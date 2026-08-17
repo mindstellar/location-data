@@ -1,5 +1,10 @@
 requests>=2.31
 
+# R2 speaks S3, so the release tools talk to it through boto3. Needed by
+# tools/publish.py and tools/refresh.py, and by validate.py, which reads its
+# baseline from the published release rather than from git.
+boto3>=1.26
+
 # Transliteration for the 871,614 settlements whose only labels are non-Latin.
 # Pinned exactly, not floated: their output becomes a name and a slug, so an
 # upgrade rewrites names and changes the manifest fingerprint on every row it
