@@ -1,9 +1,25 @@
-# location-data
+<h1 align="center">location-data</h1>
 
-A worldwide dataset of countries, administrative divisions and settlements,
-built from Wikidata and published **CC0** — plus the pipeline that builds it.
+<p align="center">
+  A worldwide dataset of countries, administrative divisions and settlements,<br>
+  built from Wikidata and published <strong>CC0</strong> — plus the pipeline that builds it.
+</p>
 
-**255 countries · 4,328 administrative divisions · 1,674,947 settlements**
+<p align="center">
+  <a href="https://creativecommons.org/publicdomain/zero/1.0/"><img alt="data licence: CC0-1.0" src="https://img.shields.io/badge/data-CC0--1.0-3fa34d?style=flat-square"></a>
+  <a href="LICENSE"><img alt="code licence: GPL-3.0" src="https://img.shields.io/badge/code-GPL--3.0-4a5568?style=flat-square"></a>
+  <a href="https://geo.mindstellar.com/releases/latest.json"><img alt="settlements" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgeo.mindstellar.com%2Freleases%2Flatest.json&query=%24.settlements&label=settlements&color=2b6cb0&style=flat-square"></a>
+  <a href="https://geo.mindstellar.com/releases/latest.json"><img alt="countries" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgeo.mindstellar.com%2Freleases%2Flatest.json&query=%24.countries&label=countries&color=2b6cb0&style=flat-square"></a>
+  <a href="https://geo.mindstellar.com/releases/latest.json"><img alt="administrative divisions" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgeo.mindstellar.com%2Freleases%2Flatest.json&query=%24.regions&label=divisions&color=2b6cb0&style=flat-square"></a>
+  <a href="docs/LIMITATIONS.md"><img alt="coordinate coverage: 100%" src="https://img.shields.io/badge/coordinates-100%25-3fa34d?style=flat-square"></a>
+  <a href="https://geo.mindstellar.com/releases/latest.json"><img alt="current release" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgeo.mindstellar.com%2Freleases%2Flatest.json&query=%24.version&label=release&color=718096&style=flat-square"></a>
+</p>
+
+<p align="center">
+  <sub>Every count above is read live from the published release. Nothing here goes stale.</sub>
+</p>
+
+---
 
 Every settlement has coordinates. No region contains the same name twice. Two
 runs over the same Wikidata state produce byte-identical output.
