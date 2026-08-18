@@ -89,7 +89,10 @@ Spain.
 
 Each country also has **one region named after the country itself**, which
 catches settlements whose containment reaches no division. It appears only if
-something lands in it, which is why counts here are typically ISO + 1.
+something lands in it, which is why counts here are typically ISO + 1. It holds
+57,250 settlements across 249 countries, and for Lithuania 99% of them —
+[`UNPLACED-SETTLEMENTS.md`](UNPLACED-SETTLEMENTS.md) measures it per country and
+explains why `build-stats.json` reports a smaller number.
 
 A short hand-maintained list corrects the cases the rule cannot see, because
 ISO itself carries entries that are not first-level divisions and nothing

@@ -236,6 +236,10 @@ names, timezones outside single-zone countries), and the choices that are
 decisions rather than defects — disputed territories, country-level regions,
 territories shipping as countries rather than as regions of their parent.
 
+[`docs/UNPLACED-SETTLEMENTS.md`](docs/UNPLACED-SETTLEMENTS.md) measures the
+country-named fallback region: how many settlements sit in one, in which
+countries, and why the build stats under-report it.
+
 [`docs/RELEASING.md`](docs/RELEASING.md) covers how a release is produced and
 published. [`CONTRIBUTING.md`](CONTRIBUTING.md) covers what the pipeline
 decides, where each decision lives, and the traps that have already been hit.
