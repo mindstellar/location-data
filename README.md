@@ -132,7 +132,9 @@ which would close real gaps documented in
 [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
 
 Where Wikidata alone cannot fill a gap, the fallbacks are chosen the same way.
-Time zones come from the IANA time zone database, which is public domain. Flag
+Time zones come from the IANA time zone database, which is public domain.
+Administrative boundaries — used only to place a settlement that states no
+containment at all — come from Natural Earth, which is public domain. Flag
 emoji and ccTLDs are computed from the ISO 3166-1 code rather than read from
 anywhere. Nothing here adds an obligation.
 
@@ -168,6 +170,10 @@ the line where you would expect.
 
 - **Every settlement has coordinates.** A row without a position cannot be
   mapped, distance-sorted or deduplicated, so it is not shipped.
+- **One row per place.** Where upstream states that two items are the same
+  place and only one of them has a division, the other is not shipped. Nothing
+  here is decided by distance: the same statement links places that are merely
+  confusable as readily as ones that are identical.
 - **No region contains the same name twice.** A name identifying two places
   identifies neither, and a consumer picking from a list cannot see that the
   choice was ambiguous. Duplicates are merged where they are the same place,
@@ -189,20 +195,26 @@ the line where you would expect.
 pip install -r requirements.txt
 
 zcat latest-truthy.nt.gz | python dump_scan.py --out-dir dump-scan
-python dump_build.py --scan-dir dump-scan --out-dir dump-build
+python dump_build.py --scan-dir dump-scan --out-dir dump-build \
+    --boundaries ne_10m_admin_1_states_provinces.zip
 python validate.py dump-build
 ```
 
+`--boundaries` is optional and takes Natural Earth's admin-1 zip; without it
+the settlements that state no containment ship in the region named after their
+country, as they always have.
+
 `dump_scan.py` makes one streaming pass over the Wikidata truthy dump (~982 GB
 of N-Triples, ~8.2 billion statements) and reduces it to what this build needs:
-about 1.8 GB of entity records plus the two graphs it cannot do without.
+about 1.8 GB of entity records plus the three graphs it cannot do without.
 `dump_build.py` then does all the judging with no network access at all.
 
 The split is forced, not stylistic. Nothing in a streaming pass can decide
 whether an entity is a settlement: that needs the transitive `P279` subclass
 closure, and attaching a settlement to its region needs the transitive `P131`
-containment graph. Both are scattered across the whole dump, so classification
-cannot happen until the pass is over.
+containment graph — and `P150`, which is the same containment stated by the
+parent instead of the child. All are scattered across the whole dump, so
+classification cannot happen until the pass is over.
 
 Budget on a 4-core machine: **~50 minutes** to download the dump, **~90
 minutes** to scan, **~7 minutes** to build. `tools/refresh.py` runs all of it,
@@ -225,8 +237,18 @@ comes from the Wikidata truthy dump, which is CC0. Time zones come from the
 IANA time zone database, which is public domain. Flag emoji and ccTLDs are
 computed from the ISO 3166-1 code rather than read from any source. Names in
 non-Latin scripts are machine transliterated, which is a mechanical
-transformation of CC0 input and creates no new rights. No other source
-contributes a single field.
+transformation of CC0 input and creates no new rights.
+
+One field has a second source. A settlement that states no containment at all
+— it has a country, a class and a coordinate, and nothing else — is placed by
+testing its coordinate against **Natural Earth's** admin-1 boundaries, which
+are public domain and carry no attribution or share-alike requirement. It
+decides `admin1_id` for those rows and nothing else: it answers with an ISO
+3166-2 code, that code has to name a division this dataset already ships for
+that country, and it is consulted only after both directions of Wikidata's own
+containment have come back with nothing. Which division a Natural Earth code
+means here is itself read off the Wikidata-placed settlements inside it, not
+written down. No other source contributes a single field.
 
 ## Before you depend on it
 
@@ -238,7 +260,7 @@ territories shipping as countries rather than as regions of their parent.
 
 [`docs/UNPLACED-SETTLEMENTS.md`](docs/UNPLACED-SETTLEMENTS.md) measures the
 country-named fallback region: how many settlements sit in one, in which
-countries, and why the build stats under-report it.
+countries, what reading P150 as well now places, and what is left after it.
 
 [`docs/RELEASING.md`](docs/RELEASING.md) covers how a release is produced and
 published. [`CONTRIBUTING.md`](CONTRIBUTING.md) covers what the pipeline
