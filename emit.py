@@ -332,12 +332,13 @@ def resolve_collisions(settlements, admin2_name, stats, region_qid):
 def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_records,
                   assign, settlement_classes, lang_codes, country_records, stats,
                   mode='admin1', refs=None, single_zone=None, exclude_classes=None,
-                  coarse=None, admin2_records=None):
+                  coarse=None, admin2_records=None, duplicate_of=None):
     """One country's canonical record, in the shape build_canonical_country()
     produces: neutral field names, nothing synthesised, and a region with no
     settlements is simply a region with an empty list.
     """
     refs = refs or {}
+    duplicate_of = duplicate_of or {}
     single_zone = single_zone or {}
     timezone_id = single_zone.get(iso2.upper())
     country_record = country_records.get(country_qid)
@@ -373,6 +374,14 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
                 if not is_settlement(record, settlement_classes, exclude_classes):
                     continue
                 if record['id'] in written:
+                    continue
+                # Upstream says this is the same place as a row that has a
+                # division, and this one has none. Dropped rather than merged:
+                # there is nothing on it worth absorbing -- no parent, no
+                # population, one sitelink -- and merging would take its name
+                # as an alternative for a place that already has one.
+                if record['id'] in duplicate_of:
+                    stats['said_to_be_a_duplicate'] += 1
                     continue
                 written.add(record['id'])
                 seen += 1
@@ -467,6 +476,15 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
     for admin1_qid in list(by_region):
         by_region[admin1_qid] = resolve_collisions(by_region[admin1_qid],
                                                    admin2_name, stats, admin1_qid)
+
+    # How many rows ship inside the region named after the country -- the
+    # fallback for a settlement with no division, and for a tier-4 country the
+    # only region there is. Counted here, on the rows that actually ship, and
+    # not from any earlier counter: a settlement whose division was resolved
+    # and then removed by the region exclusions lands here too, having
+    # incremented nothing on the way. That gap was the whole of issue #1 --
+    # Lithuania reported 43 while 23,193 shipped in the region.
+    stats['country_region'] = len(by_region.get(country_qid, ()))
 
     regions = []
     emit = dict(admin1_selected)

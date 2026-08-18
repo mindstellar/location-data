@@ -32,6 +32,7 @@ from dump_build import (  # noqa: E402
 from classify import Exclusions, exclusion_sets, is_not_a_place  # noqa: E402
 from contain import (  # noqa: E402
     is_country_item,
+    rescue_with_contains,
     select_admin1s,
     select_admin1s_under_country,
     select_admin1s_with_dissolved,
@@ -205,6 +206,57 @@ class Containment(unittest.TestCase):
     def test_an_unreachable_settlement_is_left_unassigned(self):
         assign, _ = propagate_containment(edges((900, 800)), {123: 123})
         self.assertNotIn(900, assign)
+
+
+class ContainmentStatedByTheParent(unittest.TestCase):
+    """P150, the rescue for what P131 alone leaves at the country.
+
+    Lithuania is the shape throughout: a settlement sits in a municipality, the
+    municipality points P131 at the country because the county edge carries a
+    2010 end date, and the county lists the municipality under P150. 23,193 of
+    Lithuania's 23,404 settlements reached nothing but the country before this.
+    """
+
+    settlement, municipality, county, country = 900, 800, 100, 37
+
+    def p150(self):
+        return edges((self.municipality, self.county))
+
+    def test_a_parent_listing_its_child_completes_the_chain(self):
+        assign = rescue_with_contains(
+            edges((self.settlement, self.municipality)), self.p150(),
+            {self.county: self.county})
+        self.assertEqual(assign[self.settlement], self.county)
+
+    def test_the_country_is_never_an_answer_it_can_give(self):
+        """Seeded from the divisions alone, so a rescue can only ever move a
+        settlement from its country to a division and never the reverse."""
+        assign = rescue_with_contains(
+            edges((self.settlement, self.country)), self.p150(),
+            {self.county: self.county})
+        self.assertNotIn(self.settlement, assign)
+
+    def test_a_scan_with_no_p150_rescues_nothing(self):
+        """Every release up to this one was built from such a scan, and one
+        taken before P150 was harvested must still build."""
+        self.assertEqual(
+            rescue_with_contains(edges((self.settlement, self.municipality)),
+                                 array.array('i'), {self.county: self.county}),
+            {})
+
+    def test_the_precedence_is_in_running_the_walk_twice(self):
+        """Inside one walk a P150 edge is a hop like any other and can win on
+        distance. That a stated parent never outranks a stated child is not a
+        property of this function but of the caller, which walks P131 alone
+        first and reads the rescue only where that reached no division."""
+        other = 700
+        p131 = edges((self.settlement, other))
+        first, _ = propagate_containment(p131, {other: other})
+        second = rescue_with_contains(p131, edges((self.settlement, self.county)),
+                                      {self.county: self.county, other: other})
+        self.assertEqual(first[self.settlement], other, 'this is what ships')
+        self.assertEqual(second[self.settlement], self.county,
+                         'and this is never asked for, because the first pass answered')
 
 
 class Usable(unittest.TestCase):
