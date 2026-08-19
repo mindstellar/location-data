@@ -13,7 +13,9 @@ almost everything.
 Measured against release `2026-08-15T0426Z`, over every `data/<CC>.ndjson`.
 What the pipeline has since been changed to do about it is at the
 [end](#what-the-pipeline-does-about-it-now); everything before that describes
-the release as it shipped.
+the release as it shipped. **A build over the same 11 August dump now leaves
+5,477 settlements in a country-named region rather than 57,250**, and the
+figures in the later sections are measured on that build rather than projected.
 
 ## How big it is
 
@@ -147,8 +149,9 @@ containment out to Wikidata:
 | KR | 456 | 8 | 2% |
 | SI, BI, CI, IN, FO, SG | 2,364 | 0 | — |
 
-About 22,600 settlements in total, of which Lithuania is nearly all. Ten
-Lithuanian counties go from 211 settlements between them to roughly 22,300.
+On the real build, 27,476 settlements in total. Ten Lithuanian counties go from
+211 settlements between them to 23,456, and Lithuania's country-named region
+falls from 23,193 to seven.
 
 Spot-checked against geography rather than trusted: every one of the 22,070
 Lithuanian rows lands within 120 km of the centroid of the county it is
@@ -241,9 +244,15 @@ region across 254 countries:
 
 | | |
 |---|---|
-| placed by a code that matches one we ship | **44,558** (78%) |
-| placed by reading what a code means here | **6,685** (12%) |
-| still in the country-named region | **5,953** (10%) |
+| placed by a division stating it contains them (P150) | **27,476** |
+| placed by a code that matches one we ship | **38,675** |
+| placed by reading what a code means here | **6,991** |
+| dropped as one place recorded twice (P460) | **111** |
+| **still in the country-named region** | **5,477** |
+
+That is the whole release, measured: 57,250 down to 5,477, across 209 countries
+rather than 249. France ends at 85, India at 63, Greece at 17, Poland at 2,
+Lithuania at 7.
 
 France alone accounts for 4,135 of the second row, at 99.6% purity; Britain 479
 at 99.9%, Italy 263 at 99.4%, Spain 189 at 99.8%, Poland 308 at 96.2%.
@@ -265,7 +274,7 @@ of them absorbed into rows that were already there.
 
 ## What is left
 
-**5,953 settlements, 0.36% of the dataset**, in four situations:
+**5,477 settlements, 0.33% of the dataset**, in four situations:
 
 | | |
 |---|---|
@@ -323,10 +332,18 @@ the settlements themselves point at was never asked.
 **Tier 4 now asks it.** For a country no other tier resolves, the pipeline
 takes the entities that country's settlements say contain them, and what
 contains those, and applies the same root-most rule used everywhere else. The
-Faroes come out as their six sýslur rather than their 33 municipalities, for
-the same reason France comes out as régions rather than départements. Verified
-against the real hierarchy pulled from Wikidata: 6 regions, nothing left in the
-country-named region.
+Faroes come out as their sýslur rather than their 33 municipalities, for the
+same reason France comes out as régions rather than départements. On the real
+build that is one region holding all 149 settlements before, and five sýslur
+holding 120 after, with 29 left over.
+
+It has to be asked in the right place, and was not at first. Tier 4 originally
+ran only where tier 2 found nothing, and the countries that need it are the
+ones where tier 2 finds something useless: a handful of administrative items do
+point P131 at the Faroe Islands, so tier 2 answered, and 0 of 155 settlements
+attached to what it chose. A full build selected tier 4 for no country at all.
+It is now tried where a tier is seen to have attached nothing, and taken only
+if it places more than the tier it replaces.
 
 Two things keep it from running wild, both learned the hard way on the Cook
 Islands and the Vatican. Asking what the *country* claims rather than what its

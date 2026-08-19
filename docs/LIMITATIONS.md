@@ -98,8 +98,8 @@ Three things about it have since changed in the pipeline, and land in the next
 release.
 
 Containment now also reads **P150**, the parent's statement that it contains a
-division, which places about 22,600 of those settlements — Lithuania alone
-accounts for 22,070 of them.
+division, which places 27,476 of those settlements — Lithuania alone accounts
+for 24,117 of them.
 
 What still reaches no division is placed by its **coordinate**, against Natural
 Earth's public-domain admin-1 boundaries. This is the one thing in the dataset
@@ -110,8 +110,8 @@ containment have failed. Where the code names a division at another level or
 from an older ISO edition — Natural Earth gives France its départements and
 this dataset ships régions — what it means here is learned from the settlements
 already placed inside it, and only where they are at least 90% agreed. Over the
-whole of the last release that places 51,243 of the 57,196 settlements in a
-country-named region, 90% of them. It is optional: a build without
+whole of the last release that places 45,666 settlements, on top of what P150
+reaches. It is optional: a build without
 `--boundaries` behaves as every released build has.
 
 And `build-stats.json` now carries `country_region` per country, counted on the
