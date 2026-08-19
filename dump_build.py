@@ -300,15 +300,17 @@ def main():
     needs_fallback = [c for c in wanted if not plans[c].leaf]
     fallback_records = {}
     country_children = {}
-    admin_classes = set()
+    # Blocked, like every other closure here: without it "military area" makes
+    # gun batteries administrative divisions. Computed whether or not any
+    # country needs a fallback tier now, because the attachment fallback below
+    # asks for it long after this point and cannot know in advance.
+    admin_classes = subclass_closure(p279, [Q_ADMIN_TERRITORIAL_ENTITY],
+                                     CLOSURE_BLOCKED)
+
     if needs_fallback:
         print('  %d countries have no P300 tier: %s'
               % (len(needs_fallback), ', '.join(needs_fallback)), flush=True)
 
-        # Blocked, like every other closure here: without it "military area"
-        # makes gun batteries administrative divisions.
-        admin_classes = subclass_closure(p279, [Q_ADMIN_TERRITORIAL_ENTITY],
-                                         CLOSURE_BLOCKED)
         fallback_qids = {countries[c] for c in needs_fallback if c in countries}
         country_children = {}
         for i in range(0, len(p131), 2):
@@ -332,6 +334,99 @@ def main():
                         refs[record['id']] = record
         fallback_records.update(refs)
 
+    def divisions_the_settlements_claim(country_qid):
+        """Tier 4: what this country's own settlements say contains them.
+
+        Everything involved is in one file. dump_scan.py shards on P17, and a
+        division of the Faroes carries P17 = Faroe Islands exactly as its
+        villages do, so the whole hierarchy -- and nothing else -- is in the
+        country's own shard.
+
+        Returns (selected, records, assignment): the divisions, the shard, and
+        where each of its settlements lands, which the caller needs when this
+        runs too late for containment propagation to do it.
+        """
+        shard = os.path.join(entities_dir, '%d.jsonl' % country_qid)
+        if not os.path.exists(shard):
+            return {}, {}, {}
+        claimed = {}
+        with open(shard, encoding='utf-8') as handle:
+            for line in handle:
+                record = json.loads(line)
+                claimed[record['id']] = record
+        settlements = [record for record in claimed.values()
+                       if is_settlement(record, settlement_classes, exclude_classes)]
+
+        def parents_of(qid):
+            for parent in (claimed.get(qid) or {}).get('located_in', ()):
+                if parent.startswith('Q'):
+                    number = int(parent[1:])
+                    if number in claimed:
+                        yield number
+
+        ancestors = {}
+        frontier = [record['id'] for record in settlements]
+        for _hop in range(12):
+            nxt = []
+            for node in frontier:
+                for parent in parents_of(node):
+                    if parent not in ancestors:
+                        ancestors[parent] = claimed[parent]
+                        nxt.append(parent)
+            if not nxt:
+                break
+            frontier = nxt
+        # Walked through, never selected. A Faroese village sits in a
+        # municipality and the municipality in a syssla, and a municipality is
+        # a settlement by this pipeline's own rule -- so the chain has to pass
+        # through it to reach the division above. Selecting it instead is how
+        # the Cook Islands came out with Avarua, a town, as a region holding
+        # the suburb next to it.
+        containers = {qid: record for qid, record in ancestors.items()
+                      if not is_settlement(record, settlement_classes, exclude_classes)}
+        selected = select_admin1s_by_p17(country_qid, containers, admin_classes,
+                                         not_a_place)
+        if not selected:
+            return {}, claimed, {}
+
+        def all_ancestors(qid, depth=12):
+            seen, frontier = set(), [qid]
+            for _ in range(depth):
+                nxt = []
+                for node in frontier:
+                    for parent in parents_of(node):
+                        if parent not in seen:
+                            seen.add(parent)
+                            nxt.append(parent)
+                if not nxt:
+                    break
+                frontier = nxt
+            return seen
+
+        selected = keep_root_most(selected, all_ancestors)
+
+        # Nearest first, so a settlement inside a municipality inside a syssla
+        # lands in the syssla and not in whatever else is above it. Ties break
+        # on the lowest id, as everywhere.
+        assignment = {}
+        for record in settlements:
+            frontier, seen = [record['id']], {record['id']}
+            for _ in range(12):
+                hit = sorted(node for node in frontier if node in selected)
+                if hit:
+                    assignment[record['id']] = hit[0]
+                    break
+                nxt = []
+                for node in frontier:
+                    for parent in parents_of(node):
+                        if parent not in seen:
+                            seen.add(parent)
+                            nxt.append(parent)
+                if not nxt:
+                    break
+                frontier = nxt
+        return selected, claimed, assignment
+
     if needs_fallback:
         for iso2 in needs_fallback:
             plan = plans[iso2]
@@ -353,74 +448,15 @@ def main():
                 plan.tier = 3
                 continue
 
-            # Tier 4 reads the country's own shard. Its divisions are in there
-            # by P17 and nowhere else, which is the only statement joining them
-            # to the country when -- as for the Faroe Islands -- nothing in the
-            # hierarchy states a P131 upward at all.
-            shard = os.path.join(entities_dir, '%d.jsonl' % plan.country_qid)
-            claimed = {}
-            if os.path.exists(shard):
-                with open(shard, encoding='utf-8') as handle:
-                    for line in handle:
-                        record = json.loads(line)
-                        claimed[record['id']] = record
-            # What the country's own settlements say contains them, and what
-            # contains that. Everything in the chain is in this shard too --
-            # a division of the Faroes carries P17 = Faroe Islands like its
-            # villages do -- so the walk never leaves the file.
-            ancestors = {}
-            frontier = [record for record in claimed.values()
-                        if is_settlement(record, settlement_classes, exclude_classes)]
-            for _hop in range(12):
-                nxt = []
-                for record in frontier:
-                    for parent in record.get('located_in', ()):
-                        if not parent.startswith('Q'):
-                            continue
-                        number = int(parent[1:])
-                        if number in ancestors or number not in claimed:
-                            continue
-                        ancestors[number] = claimed[number]
-                        nxt.append(claimed[number])
-                if not nxt:
-                    break
-                frontier = nxt
-            # Walked through, never selected. A Faroese village sits in a
-            # municipality and the municipality in a syssla, and a municipality
-            # is a settlement by this pipeline's own rule -- so the chain has
-            # to pass through it to reach the division above. Selecting it
-            # instead is how the Cook Islands came out with Avarua, a town, as
-            # a region holding the suburb next to it.
-            containers = {qid: record for qid, record in ancestors.items()
-                          if not is_settlement(record, settlement_classes, exclude_classes)}
-            tier4 = select_admin1s_by_p17(plan.country_qid, containers, admin_classes,
-                                          not_a_place)
+            # Tier 4: the divisions its own settlements name. Reached here
+            # only when tier 2 found nothing at all; a tier that was found and
+            # turns out to reach nothing is caught after grouping, where the
+            # attachment fallback can see that it attached nothing.
+            tier4, records, _assignment = divisions_the_settlements_claim(plan.country_qid)
             if tier4:
-                # Ancestors from the shard's own records rather than from the
-                # graph-wide map, which is closed upward from the P300-bearing
-                # divisions and so does not reach a hierarchy that carries no
-                # ISO code anywhere in it.
-                def claimed_ancestors(qid, depth=12, records=claimed):
-                    seen, frontier = set(), [qid]
-                    for _ in range(depth):
-                        nxt = []
-                        for node in frontier:
-                            for parent in (records.get(node) or {}).get('located_in', ()):
-                                if not parent.startswith('Q'):
-                                    continue
-                                number = int(parent[1:])
-                                if number not in seen:
-                                    seen.add(number)
-                                    nxt.append(number)
-                        if not nxt:
-                            break
-                        frontier = nxt
-                    return seen
-
-                tier4 = keep_root_most(tier4, claimed_ancestors)
                 plan.leaf = tier4
                 plan.tier = 4
-                admin1_candidates.update({q: containers[q] for q in tier4})
+                admin1_candidates.update({q: records[q] for q in tier4})
                 continue
 
             plan.use_country_as_region(country_records, admin1_candidates)
@@ -704,6 +740,7 @@ def main():
     # labels are unusable, and shipped with no regions and no cities at all
     # until the floor came down to five.
     rescued = []
+    claimed_tier4 = []
     for iso2 in wanted:
         plan = plans[iso2]
         if plan.mode == 'country':
@@ -713,9 +750,38 @@ def main():
         if stranded >= 5 and attached < stranded * 0.25:
             if plan.country_qid is None:
                 continue
+            # Before flattening the country, ask tier 4's question. A tier that
+            # was selected and then attached nothing is the same situation as
+            # no tier at all, and it is the commoner one: the Faroe Islands
+            # reach tier 2, because a handful of administrative items do point
+            # P131 at the country, and then 0 of 155 settlements attach to them
+            # -- while 147 sit under one of 33 municipalities, every
+            # municipality inside a syssla, none of which says anything about
+            # the country except P17.
+            #
+            # Too late for containment propagation, which has already run, so
+            # the assignment comes back with the divisions. It can: everything
+            # in the chain is in the one shard, and the walk is a few hundred
+            # settlements rather than the whole graph.
+            claimed_leaf, records, assignment = divisions_the_settlements_claim(
+                plan.country_qid)
+            if claimed_leaf and len(assignment) > attached:
+                plan.leaf = claimed_leaf
+                plan.tier = 4
+                admin1_candidates.update({q: records[q] for q in claimed_leaf})
+                assign.update(assignment)
+                claimed_tier4.append((iso2, len(assignment), attached + stranded))
+                continue
             plan.use_country_as_region(country_records, admin1_candidates)
             tier4_country[plan.country_qid] = iso2
             rescued.append((iso2, attached, stranded))
+
+    if claimed_tier4:
+        print('  %d countries selected a tier that reached nothing and take their '
+              'divisions from what their settlements name instead: %s'
+              % (len(claimed_tier4), ', '.join(
+                  '%s (%d of %d)' % (c, n, total) for c, n, total in claimed_tier4)),
+              flush=True)
 
     if rescued:
         print('  %d countries attached almost nothing and fall back to a country-level '

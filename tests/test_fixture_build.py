@@ -266,7 +266,7 @@ def build_fixture(p150_edges=(), boundaries=None, countries='AL'):
         shutil.rmtree(out, ignore_errors=True)
 
 
-def tiny_scan(directory, duplicates=()):
+def tiny_scan(directory, duplicates=(), decoy=False):
     """A scan for one invented country whose divisions state nothing upward.
 
     The Faroe Islands in miniature, and the reason tier 4 exists: settlements
@@ -288,6 +288,17 @@ def tiny_scan(directory, duplicates=()):
 
     rows = [{'id': country, 'iso_3166_1': ['ZZ'], 'capital': ['Q910001'],
              'instance_of': ['Q6256'], 'labels': {'en': 'Testland'}}]
+    # An administrative entity that does point P131 at the country and that no
+    # settlement can reach. Tier 2 selects it and stops there, which is how the
+    # Faroe Islands came out with one region: a handful of items answer the
+    # question tier 2 asks, and 0 of 155 settlements attach to them.
+    if decoy:
+        rows.append({'id': 920001, 'country': 'Q%d' % country,
+                     'instance_of': ['Q%d' % district_class],
+                     'located_in': ['Q%d' % country],
+                     'coord': 'Point(99.0 50.0)',
+                     'labels': {'en': 'Decoy Region'}})
+        p131 += array.array('i', [920001, country])
     for index, district in enumerate(districts):
         rows.append({'id': district, 'country': 'Q%d' % country,
                      'instance_of': ['Q%d' % district_class],
@@ -360,6 +371,35 @@ class DivisionsTheCountryNeverClaims(unittest.TestCase):
                     elif row.get('type') == 'settlement':
                         regions[-1][2] += 1
             return result.stdout, regions
+        finally:
+            shutil.rmtree(scan, ignore_errors=True)
+            shutil.rmtree(out, ignore_errors=True)
+
+    def test_a_tier_that_reaches_nothing_gives_way_to_one_that_does(self):
+        """The bug this shipped with. Tier 4 was only asked when tier 2 found
+        nothing, and the countries that need it are the ones where tier 2 finds
+        something useless -- so it never ran on a real build."""
+        scan = tempfile.mkdtemp(prefix='tiny-decoy-scan-')
+        out = tempfile.mkdtemp(prefix='tiny-decoy-build-')
+        try:
+            tiny_scan(scan, decoy=True)
+            result = subprocess.run(
+                [sys.executable, os.path.join(ROOT, 'dump_build.py'),
+                 '--scan-dir', scan, '--out-dir', out, '--countries', 'ZZ'],
+                capture_output=True, text=True, cwd=ROOT)
+            if result.returncode:
+                raise AssertionError('%s\n%s' % (result.stdout, result.stderr))
+            regions = []
+            with open(os.path.join(out, 'data', 'ZZ.ndjson'), encoding='utf-8') as handle:
+                for line in handle:
+                    row = json.loads(line)
+                    if row.get('type') == 'region':
+                        regions.append(row['name'])
+            self.assertIn('take their divisions from what their settlements name',
+                          result.stdout)
+            self.assertEqual(['District 1', 'District 2'], sorted(regions))
+            self.assertNotIn('Decoy Region', regions)
+            self.assertNotIn('Testland', regions)
         finally:
             shutil.rmtree(scan, ignore_errors=True)
             shutil.rmtree(out, ignore_errors=True)
