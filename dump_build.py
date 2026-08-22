@@ -612,6 +612,7 @@ def main():
     seen_counts = {}
     rescued_by_contains = {}
     placed_by_boundary = {}
+    unheld = {}
     # P460, "said to be the same as", read only in the one direction that is
     # safe: a settlement upstream calls the same thing as another one, and
     # which of the two has a division decides which is the real row. Recorded
@@ -675,6 +676,16 @@ def main():
                                 by_boundary[home_iso2] = by_boundary.get(home_iso2, 0) + 1
                                 assigned = in_division
                                 iso2 = home_iso2
+                    # Still nowhere after both rescues: either nothing contains
+                    # it, or its own country is standing in for a division.
+                    # Counted per country, because this and not the orphan
+                    # count is what says a division tier is failing to hold the
+                    # settlements it was selected for. Burundi's 473 all have a
+                    # containment chain -- it reaches the country and stops --
+                    # so the orphan count sees 0 of them.
+                    if assigned is None or assigned in country_level:
+                        if home_iso2:
+                            unheld[home_iso2] = unheld.get(home_iso2, 0) + 1
                 if iso2 is None and home_qid is not None:
                     iso2 = tier4_country.get(home_qid)
                 if iso2 is None:
@@ -745,11 +756,26 @@ def main():
         plan = plans[iso2]
         if plan.mode == 'country':
             continue
-        attached = seen_counts.get(iso2, 0) - orphans.get(iso2, 0)
-        stranded = orphans.get(iso2, 0)
-        if stranded >= 5 and attached < stranded * 0.25:
+        attached = seen_counts.get(iso2, 0) - unheld.get(iso2, 0)
+        stranded = unheld.get(iso2, 0)
+        # The flatten decision below keeps the number it was written for: what
+        # reached no division whatsoever, rather than what reached only the
+        # country. Widening that one would take countries whose tier is real
+        # and merely partial and throw it away.
+        no_division = orphans.get(iso2, 0)
+        if stranded >= 5 and attached < stranded:
             if plan.country_qid is None:
                 continue
+            # A tier that was selected and then failed to hold the country's
+            # settlements is asked to justify itself, at a far looser threshold
+            # than the one that flattens a country: more stranded than attached
+            # is enough to ask. Burundi is why. Its eighteen provinces became
+            # five in 2025, sixteen of the old ones carry a dissolution date,
+            # and the two survivors that still hold an ISO code are all tier 1
+            # could select -- so 473 of its 594 settlements attached to nothing
+            # while the five current provinces sat in its own shard, named by
+            # those very settlements. It missed the old trigger by three rows.
+            #
             # Before flattening the country, ask tier 4's question. A tier that
             # was selected and then attached nothing is the same situation as
             # no tier at all, and it is the commoner one: the Faroe Islands
@@ -765,16 +791,32 @@ def main():
             # settlements rather than the whole graph.
             claimed_leaf, records, assignment = divisions_the_settlements_claim(
                 plan.country_qid)
-            if claimed_leaf and len(assignment) > attached:
+            # It has to be a decisive improvement, not a marginal one. The
+            # Marshall Islands traded 27 real divisions for 7 in order to place
+            # one more settlement, and Kiribati offered to trade its three
+            # ISO-coded island groups for five uncoded divisions to place four
+            # more. Burundi's five provinces place 615 against 121, which is
+            # what a tier that is actually right looks like.
+            if claimed_leaf and len(assignment) >= max(attached * 2, attached + 5):
                 plan.leaf = claimed_leaf
                 plan.tier = 4
                 admin1_candidates.update({q: records[q] for q in claimed_leaf})
                 assign.update(assignment)
                 claimed_tier4.append((iso2, len(assignment), attached + stranded))
                 continue
+            # Only now the blunt one. Asking tier 4 is safe at any threshold --
+            # it is taken only if it places more than what it replaces -- but
+            # flattening a country into one region is not, so that keeps the
+            # narrow trigger it was given: fewer than a fifth of the country's
+            # settlements attaching at all. Sri Lanka sat at 629 against 2,243
+            # and must not trip it; Burundi sits at 121 against 473 and must
+            # not either, because what it needs is a better tier and it has
+            # just been offered one.
+            if seen_counts.get(iso2, 0) - no_division >= no_division * 0.25:
+                continue
             plan.use_country_as_region(country_records, admin1_candidates)
             tier4_country[plan.country_qid] = iso2
-            rescued.append((iso2, attached, stranded))
+            rescued.append((iso2, seen_counts.get(iso2, 0) - no_division, no_division))
 
     if claimed_tier4:
         print('  %d countries selected a tier that reached nothing and take their '
@@ -903,8 +945,8 @@ def main():
                 continue
             code = boundaries.code_at(lat, lng)
             if code is not None:
-                samples.append((code, division))
-        learned = learn_code_map(samples)
+                samples.append((code, division, lat, lng))
+        learned = learn_code_map(samples, well_inside=boundaries.well_inside)
         for qid, code in wanted_codes.items():
             division = learned.get(code)
             if division is not None:
@@ -929,6 +971,8 @@ def main():
     if duplicate_of:
         print('  %d settlements state no division and are said to be the same as one '
               'that does; the placed row is the one kept' % len(duplicate_of), flush=True)
+
+    from_boundary = set(placed_by_boundary) | set(translated)
 
     if translated:
         assign.update(translated)
@@ -973,7 +1017,8 @@ def main():
             settlement_classes, lang_codes, country_records, stats,
             mode=plan.mode, refs=refs, single_zone=single_zone,
             exclude_classes=exclude_classes, coarse=plan.coarse,
-            admin2_records=admin2_records, duplicate_of=duplicate_of)
+            admin2_records=admin2_records, duplicate_of=duplicate_of,
+            from_boundary=from_boundary)
 
         data_filename, data_digest, data_bytes = write_canonical_ndjson(country, data_dir)
         json_filename, json_digest, json_bytes = write_country_json(country, json_dir)

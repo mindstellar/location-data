@@ -218,7 +218,7 @@ def one_polygon_shapefile(path, code, west, south, east, north):
     return path
 
 
-def build_fixture(p150_edges=(), boundaries=None, countries='AL'):
+def build_fixture(p150_edges=(), boundaries=None, countries='AL', without_p150=False):
     """A build of the fixture with the optional graphs dropped beside it.
 
     With neither, this is the compatibility case: the scan every published
@@ -232,9 +232,23 @@ def build_fixture(p150_edges=(), boundaries=None, countries='AL'):
     out = tempfile.mkdtemp(prefix='fixture-extra-build-')
     try:
         shutil.copytree(FIXTURE, scan, dirs_exist_ok=True)
-        if p150_edges:
-            with open(os.path.join(scan, 'graph-p150.i32'), 'wb') as handle:
-                array.array('i', p150_edges).tofile(handle)
+        # The fixture carries a real P150 graph of its own now, so an edge
+        # given here is *added* to it. Overwriting it instead would take 502
+        # real edges away and quietly measure something else -- which it did,
+        # and showed a rescue putting more settlements in the bucket than no
+        # rescue at all.
+        graph = os.path.join(scan, 'graph-p150.i32')
+        if without_p150:
+            if os.path.exists(graph):
+                os.remove(graph)
+        elif p150_edges:
+            existing = array.array('i')
+            if os.path.exists(graph):
+                with open(graph, 'rb') as handle:
+                    existing.frombytes(handle.read())
+            existing.extend(p150_edges)
+            with open(graph, 'wb') as handle:
+                existing.tofile(handle)
         command = [sys.executable, os.path.join(ROOT, 'dump_build.py'),
                    '--scan-dir', scan, '--out-dir', out, '--countries', countries]
         if boundaries:
@@ -246,6 +260,7 @@ def build_fixture(p150_edges=(), boundaries=None, countries='AL'):
             stats = json.load(handle)
         divisions = {}
         duplicates = []
+        used = {}
         for code in countries.split(','):
             region, names = None, set()
             with open(os.path.join(out, 'data', '%s.ndjson' % code), encoding='utf-8') as handle:
@@ -259,8 +274,9 @@ def build_fixture(p150_edges=(), boundaries=None, countries='AL'):
                         if row['name'] in names:
                             duplicates.append((code, region, row['name']))
                         names.add(row['name'])
+                        used.setdefault(code, set()).add(row['admin1_id'])
         return (result.stdout, {e['code']: e for e in stats['countries']},
-                divisions, duplicates)
+                divisions, duplicates, used)
     finally:
         shutil.rmtree(scan, ignore_errors=True)
         shutil.rmtree(out, ignore_errors=True)
@@ -488,41 +504,46 @@ class SaidToBeTheSameAs(unittest.TestCase):
 
 
 class ContainsRescue(unittest.TestCase):
-    """The P150 rescue, end to end, over a fixture whose scan predates the
-    property -- as every scan that produced a published release does.
+    """P150, over a fixture that now carries a real graph of its own.
 
-    Albania supplies the shape: 308 of its settlements ship in the region named
-    after the country, 59 of them reaching no further than Q236845. One
-    synthesised edge saying a selected county contains Q236845 moves exactly
-    those 59, and the same edge naming a Maltese division moves none of them.
+    Albania is the case: 308 of its settlements ship in the region named after
+    the country when the graph is taken away, and 244 when it is there, because
+    66 of them reach a division only through a statement made by that division
+    rather than by themselves.
     """
 
-    PARENT = 236845
-    AL_IN_COUNTRY_REGION = 308
+    WITHOUT = 308
+    WITH = 244
 
     def test_a_scan_with_no_p150_graph_builds_as_it_always_did(self):
-        _log, stats, _divisions, _duplicates = build_fixture()
-        self.assertEqual(stats['AL']['country_region'], self.AL_IN_COUNTRY_REGION,
-                         'the fixture moved; every number in this class reads off it')
+        """Every published release was built from such a scan."""
+        _log, stats, _divisions, _duplicates, _used = build_fixture(without_p150=True)
+        self.assertEqual(stats['AL']['country_region'], self.WITHOUT)
+        self.assertEqual(stats['AL']['placed_by_contains'], 0)
 
-    def test_a_division_claiming_a_parent_empties_that_much_of_the_bucket(self):
-        _log, _stats, divisions, _duplicates = build_fixture()
-        log, stats, _, duplicates = build_fixture([self.PARENT, divisions['AL']])
-        self.assertEqual(stats['AL']['country_region'], 250)
-        self.assertIn('reached a division only because a parent listed them', log)
-        # 59 rows meet a division's existing names for the first time here, and
-        # two of them share one. The rule that keeps a region's names unique
-        # has to run over the region they arrive in, not the bucket they left.
-        self.assertEqual(duplicates, [],
-                         'a rescued settlement duplicated a name already in its '
-                         'new region')
+    def test_the_graph_places_what_a_chain_alone_cannot(self):
+        _log, stats, _divisions, duplicates, _used = build_fixture()
+        self.assertEqual(stats['AL']['country_region'], self.WITH)
+        # 66 rescued, and the bucket falls by 64: two of them turned out to
+        # be duplicates of rows already in the region they arrived in, and
+        # merged. Placements attempted and rows shipped are different numbers
+        # everywhere in this pipeline.
+        self.assertEqual(stats['AL']['placed_by_contains'], 66)
+        self.assertEqual(stats['AL']['cities'], 3332)
+        # Those 66 meet their new region's names for the first time here.
+        self.assertEqual(duplicates, [])
 
-    def test_an_edge_from_another_country_is_refused(self):
-        _log, _stats, divisions, _duplicates = build_fixture(countries='AL,MT')
-        log, stats, _, _ = build_fixture([self.PARENT, divisions['MT']], countries='AL,MT')
-        self.assertEqual(stats['AL']['country_region'], self.AL_IN_COUNTRY_REGION,
-                         'a stated parent must not move a place across a border')
-        self.assertNotIn('reached a division only because a parent listed them', log)
+    def test_an_edge_from_another_country_cannot_claim_a_settlement(self):
+        """The guarantee is that no Albanian settlement is filed under a
+        Maltese division, and that is asserted directly rather than through a
+        count. A foreign edge does cost rescues -- the walk returns one answer
+        per settlement, so a refused foreign answer is not replaced by the
+        next-best domestic one -- but it must never place anything.
+        """
+        _log, _stats, divisions, _duplicates, _used = build_fixture(countries='AL,MT')
+        _log, _stats, _div, _dups, used = build_fixture(
+            [236845, divisions['MT']], countries='AL,MT')
+        self.assertNotIn(divisions['MT'], used['AL'])
 
 
 class BoundaryPlacement(unittest.TestCase):
@@ -536,21 +557,21 @@ class BoundaryPlacement(unittest.TestCase):
     meets the names already there.
     """
 
-    AL_IN_COUNTRY_REGION = 308
+    AL_IN_COUNTRY_REGION = 244
     BOX = (19.5, 41.0, 20.5, 42.0)          # west, south, east, north
     # Placed during grouping, before anything is dropped for want of a usable
     # name or a coordinate, which is why three of these never reach a file and
     # the bucket falls by 109 rather than 112.
-    IN_BOX = 112
-    STILL_IN_BUCKET = 199
+    IN_BOX = 111
+    STILL_IN_BUCKET = 136
 
     def zip_for(self, code, box=None):
         path = os.path.join(tempfile.mkdtemp(prefix='fixture-ne-'), 'ne.zip')
         return one_polygon_shapefile(path, code, *(box or self.BOX))
 
     def test_a_coordinate_inside_a_division_places_the_settlement(self):
-        _log, _stats, divisions, _duplicates = build_fixture()
-        log, stats, _, duplicates = build_fixture(boundaries=self.zip_for('AL-01'))
+        _log, _stats, divisions, _duplicates, _used = build_fixture()
+        log, stats, _, duplicates, _used = build_fixture(boundaries=self.zip_for('AL-01'))
         self.assertEqual(stats['AL']['placed_by_boundary'], self.IN_BOX)
         self.assertEqual(stats['AL']['country_region'], self.STILL_IN_BUCKET)
         self.assertIn('placed by their coordinates', log)
@@ -559,7 +580,7 @@ class BoundaryPlacement(unittest.TestCase):
         # Moving a row between regions must not create or lose one. It can
         # still change a merge -- two rows that were duplicates in the bucket
         # can end up in different regions -- so this is the count to watch.
-        self.assertEqual(stats['AL']['cities'], 3335)
+        self.assertEqual(stats['AL']['cities'], 3332)
         self.assertTrue(divisions)
 
     def test_a_code_this_build_does_not_ship_places_nothing_directly(self):
@@ -567,7 +588,7 @@ class BoundaryPlacement(unittest.TestCase):
         Coast's old regions -- and a code that names no division here cannot be
         matched to one. This rectangle also spans most of Albania, so the
         learned mapping refuses it too and the bucket is untouched."""
-        log, stats, _, _ = build_fixture(boundaries=self.zip_for('AL-99'))
+        log, stats, _, _, used = build_fixture(boundaries=self.zip_for('AL-99'))
         self.assertEqual(stats['AL']['placed_by_boundary'], 0)
         self.assertEqual(stats['AL']['placed_by_code_map'], 0)
         self.assertEqual(stats['AL']['country_region'], self.AL_IN_COUNTRY_REGION)
@@ -579,7 +600,7 @@ class BoundaryPlacement(unittest.TestCase):
         and 92% of them are in that one county, which is what a nesting looks
         like -- so 'AL-99' is read as meaning Gjirokaster, and the 16 unplaced
         settlements inside it follow."""
-        log, stats, _, duplicates = build_fixture(
+        log, stats, _, duplicates, _used = build_fixture(
             boundaries=self.zip_for('AL-99', (19.9, 40.0, 20.4, 40.4)))
         self.assertEqual(stats['AL']['placed_by_code_map'], 16)
         self.assertEqual(stats['AL']['country_region'],
@@ -588,24 +609,25 @@ class BoundaryPlacement(unittest.TestCase):
         self.assertEqual(duplicates, [])
 
     def test_a_polygon_that_straddles_two_divisions_is_refused(self):
-        """The purity floor. This rectangle holds 278 placed settlements and
-        only 62% of them agree on a division, which is a boundary disagreement
-        rather than a nesting, and nothing is learned from it."""
-        log, stats, _, _ = build_fixture(
+        """The purity floor, and the edge margin behind it. This rectangle
+        holds hundreds of placed settlements that do not agree on a division,
+        and the disagreement is not confined to its edges, so nothing is
+        learned from it."""
+        log, stats, _, _, used = build_fixture(
             boundaries=self.zip_for('AL-99', (19.6, 41.0, 20.0, 41.4)))
         self.assertEqual(stats['AL']['placed_by_code_map'], 0)
         self.assertEqual(stats['AL']['country_region'], self.AL_IN_COUNTRY_REGION)
         self.assertNotIn('against the divisions this build ships', log)
 
     def test_another_country_s_division_cannot_claim_it(self):
-        log, stats, _, _ = build_fixture(boundaries=self.zip_for('MT-01'),
+        log, stats, _, _, used = build_fixture(boundaries=self.zip_for('MT-01'),
                                          countries='AL,MT')
         self.assertEqual(stats['AL']['placed_by_boundary'], 0)
         self.assertEqual(stats['AL']['country_region'], self.AL_IN_COUNTRY_REGION)
         self.assertNotIn('placed by their coordinates', log)
 
     def test_a_build_with_no_boundaries_places_nothing_by_coordinate(self):
-        _log, stats, _divisions, _duplicates = build_fixture()
+        _log, stats, _divisions, _duplicates, _used = build_fixture()
         self.assertEqual(stats['AL']['placed_by_boundary'], 0)
 
     def test_placing_by_coordinate_stays_deterministic(self):

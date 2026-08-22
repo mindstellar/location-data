@@ -152,8 +152,21 @@ def _is_hole(ring):
 MIN_SUPPORT = 5
 MIN_PURITY = 0.90
 
+# How far inside a polygon a point has to be before its division counts as
+# evidence about what that polygon means, in degrees -- about 5.5 km.
+#
+# A 1:10m outline is generalised, so for a village hugging a border it runs on
+# the wrong side about as often as the right one. Those villages are not
+# evidence about anything, and counting them is what made Natural Earth's
+# Odisha look 69% pure against this dataset when 94% of the disagreement was
+# within 5 km of the line. Measured on the points that are actually inside, it
+# is 96%. Telangana stays refused at 81%, which is the point: this separates a
+# good outline read at its edges from an outline that is genuinely wrong.
+EDGE_MARGIN = 0.05
 
-def learn_code_map(samples, min_support=MIN_SUPPORT, min_purity=MIN_PURITY):
+
+def learn_code_map(samples, min_support=MIN_SUPPORT, min_purity=MIN_PURITY,
+                   well_inside=None):
     """Natural Earth's ISO code -> this build's division, learned from the
     settlements already placed.
 
@@ -174,22 +187,47 @@ def learn_code_map(samples, min_support=MIN_SUPPORT, min_purity=MIN_PURITY):
     purity floor refuses. Nothing is hand-maintained and nothing needs updating
     when ISO or Natural Earth moves -- the vote simply comes out differently.
 
-    `samples` is an iterable of (code, division). Returns code -> division.
-    Ties break on the lowest division id, the same rule the country and
-    division indexes use, so a rebuild cannot flip an answer.
+    `samples` is an iterable of (code, division, lat, lng). Returns
+    code -> division. Ties break on the lowest division id, the same rule the
+    country and division indexes use, so a rebuild cannot flip an answer.
+
+    A code that fails the purity floor is asked once more with only the
+    settlements that sit clear of the polygon's edge, if `well_inside` is
+    given. That second question is the expensive one -- five point lookups per
+    settlement rather than one -- so it is only ever asked about a code the
+    cheap question already rejected.
     """
     votes = {}
-    for code, division in samples:
-        counts = votes.setdefault(code, {})
-        counts[division] = counts.get(division, 0) + 1
+    for code, division, lat, lng in samples:
+        entry = votes.setdefault(code, ([], {}))
+        entry[0].append((division, lat, lng))
+        entry[1][division] = entry[1].get(division, 0) + 1
+
+    def winner(counts):
+        total = sum(counts.values())
+        division, best = min(((d, n) for d, n in counts.items()),
+                             key=lambda pair: (-pair[1], pair[0]))
+        return division, best, total
+
     learned = {}
-    for code, counts in votes.items():
+    for code, (rows, counts) in votes.items():
         total = sum(counts.values())
         if total < min_support:
             continue
-        division, best = min(((d, n) for d, n in counts.items()),
-                             key=lambda pair: (-pair[1], pair[0]))
+        division, best, total = winner(counts)
         if best / total >= min_purity:
+            learned[code] = division
+            continue
+        if well_inside is None:
+            continue
+        inner = {}
+        for division_id, lat, lng in rows:
+            if well_inside(lat, lng, code):
+                inner[division_id] = inner.get(division_id, 0) + 1
+        if not inner:
+            continue
+        division, best, total = winner(inner)
+        if total >= min_support and best / total >= min_purity:
             learned[code] = division
     return learned
 
@@ -249,6 +287,19 @@ class Admin1Boundaries:
     def countries(self):
         """The ISO 3166-1 codes the boundaries can answer for, as a set."""
         return {code.split('-')[0] for code in self.codes}
+
+    def well_inside(self, lat, lng, code, margin=EDGE_MARGIN):
+        """Whether this point and a cross of four around it are all in `code`.
+
+        A cheap stand-in for the distance to the nearest edge, which would mean
+        walking every segment of every ring. Four extra lookups answer the only
+        question being asked -- is this far enough from the line to be evidence.
+        """
+        for delta_lat, delta_lng in ((0, 0), (margin, 0), (-margin, 0),
+                                     (0, margin), (0, -margin)):
+            if self.code_at(lat + delta_lat, lng + delta_lng) != code:
+                return False
+        return True
 
     def code_at(self, lat, lng):
         """The ISO 3166-2 code of the division containing this point, or None.
