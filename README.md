@@ -170,6 +170,16 @@ the line where you would expect.
 
 - **Every settlement has coordinates.** A row without a position cannot be
   mapped, distance-sorted or deduplicated, so it is not shipped.
+- **Every row says where its region came from.** `admin1_source` is `stated`
+  when a containment statement upstream put it there, `boundary` when a
+  coordinate falling inside a public-domain polygon did, and `none` for a
+  settlement no division could hold. A consumer that must be able to say "we
+  know this address's region" filters on the first. Currently 98.4%, 1.3%,
+  0.3%.
+- **A region named after its country says which kind it is.** `sole` where the
+  country has no subdivision at all — Gibraltar, the Vatican, Sint Maarten —
+  and `unassigned` where it is the bucket for settlements nothing could place.
+  A picker can show the first and hide the second.
 - **One row per place.** Where upstream states that two items are the same
   place and only one of them has a division, the other is not shipped. Nothing
   here is decided by distance: the same statement links places that are merely

@@ -305,6 +305,21 @@ is why some countries have a region with the same name as the country. Its `id`
 is the country's own, its `iso_3166_2` is null, and its `place_type` is a
 country class — any of the three identifies it.
 
+It no longer has to be identified that way, and more usefully, the two things
+it means are now told apart. `sole` marks a country that has no subdivision at
+all — Gibraltar, the Vatican, Sint Maarten, seventeen in total, where this
+region is the only level and belongs in a picker like any other. `unassigned`
+marks the bucket, where a country has real divisions and these are the
+settlements none of them could hold. Exactly one of the two is true.
+
+Every settlement also carries **`admin1_source`**: `stated` where a containment
+statement upstream put it in its region, `boundary` where a coordinate falling
+inside a public-domain polygon did, `none` for the bucket. Over the last build
+that is 1,641,867 stated, 22,045 boundary and 4,714 none — 98.4%, 1.3%, 0.3%.
+The middle figure is this pipeline's inference rather than anyone's assertion,
+and a consumer that must be able to say "we know this address's region" should
+require the first.
+
 **One row per place.** A settlement that reaches no division and that upstream
 marks with P460 — *said to be the same as* — as being the same place as one
 that does is dropped, and the row with the division is kept. That removed 111
