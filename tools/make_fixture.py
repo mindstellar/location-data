@@ -127,7 +127,10 @@ def main():
 
     p279 = load_edges(os.path.join(args.scan_dir, 'graph-p279.i32'))
     p131 = load_edges(os.path.join(args.scan_dir, 'graph-p131.i32'))
-    print('full graphs: P279 %d edges, P131 %d edges' % (len(p279) // 2, len(p131) // 2))
+    p150_path = os.path.join(args.scan_dir, 'graph-p150.i32')
+    p150 = load_edges(p150_path) if os.path.exists(p150_path) else array.array('i')
+    print('full graphs: P279 %d edges, P131 %d edges, P150 %d edges'
+          % (len(p279) // 2, len(p131) // 2, len(p150) // 2))
 
     print('surveying countries and divisions...')
     country_records, country_qids, divisions = survey(entities_dir, set(wanted))
@@ -198,9 +201,17 @@ def main():
           % (shards_written, lines_written, len(classes)))
 
     print('trimming graphs...')
+    contained = ancestor_set(p131, kept_ids)
     small_p279 = keep_edges(p279, ancestor_set(p279, classes))
-    small_p131 = keep_edges(p131, ancestor_set(p131, kept_ids))
-    for filename, edges in (('graph-p279.i32', small_p279), ('graph-p131.i32', small_p131)):
+    small_p131 = keep_edges(p131, contained)
+    # Kept on the same rule and over the same set, because the build walks the
+    # two together: a P150 edge whose child the fixture never sees can rescue
+    # nothing, and one whose child it does see must survive or the fixture
+    # places fewer settlements than the full build.
+    small_p150 = keep_edges(p150, contained)
+    for filename, edges in (('graph-p279.i32', small_p279),
+                            ('graph-p131.i32', small_p131),
+                            ('graph-p150.i32', small_p150)):
         with open(os.path.join(args.out, filename), 'wb') as out:
             edges.tofile(out)
         print('  %s: %d edges' % (filename, len(edges) // 2))

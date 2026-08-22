@@ -15,6 +15,7 @@ happen until the pass is over. This stage therefore harvests without judging --
 it keeps anything that could plausibly matter and lets stage 2 decide.
 
     graph-p131.i32      child,parent int32 pairs -- the containment graph
+    graph-p150.i32      child,parent int32 pairs -- P150 read backwards
     graph-p279.i32      child,parent int32 pairs -- the class graph
     entities/<qid>.jsonl  entity records, sharded by their P17 (country)
     entities/0.jsonl      records with no P17 at all
@@ -49,6 +50,8 @@ PROPS = {
     b'P31': 'instance_of',      # -> place_type, and the settlement test
     b'P279': 'subclass_of',     # -> the class graph
     b'P131': 'located_in',      # -> containment, and admin2_id
+    b'P150': 'contains',        # -> containment again, stated from above
+    b'P460': 'same_as',         # -> "said to be the same as", for duplicates
     b'P625': 'coord',
     b'P17': 'country',
     b'P300': 'iso_3166_2',      # -> the admin-1 tier
@@ -113,7 +116,7 @@ PRESENCE_ONLY = frozenset(('dissolved', 'end_time'))
 # Multi-valued fields. Everything else keeps its first value, which is
 # deterministic because the dump is subject-grouped and we never reorder.
 MULTI = frozenset((
-    'instance_of', 'subclass_of', 'located_in', 'native_label',
+    'instance_of', 'subclass_of', 'located_in', 'contains', 'same_as', 'native_label',
     'official_language', 'iso_3166_2', 'iso_3166_1',
     'capital', 'continent', 'currency', 'tld', 'calling_code',
 ))
@@ -286,12 +289,13 @@ def scan(stream, out_dir, progress_every=20_000_000):
     shards = ShardWriter(os.path.join(out_dir, 'entities'))
 
     p131 = array.array('i')
+    p150 = array.array('i')
     p279 = array.array('i')
 
     stats = {
         'lines': 0, 'triples_kept': 0, 'entities_seen': 0, 'entities_kept': 0,
-        'p131_edges': 0, 'p279_edges': 0, 'labels': 0, 'alt_labels': 0, 'blank_nodes': 0,
-        'bad_lines': 0,
+        'p131_edges': 0, 'p150_edges': 0, 'p279_edges': 0,
+        'labels': 0, 'alt_labels': 0, 'blank_nodes': 0, 'bad_lines': 0,
     }
 
     cur_qid = None          # bytes, compared directly -- no int() per line
@@ -309,11 +313,29 @@ def scan(stream, out_dir, progress_every=20_000_000):
                 p131.append(qid_num)
                 p131.append(int(parent[1:]))
                 stats['p131_edges'] += 1
+        # P150 is P131 stated from the other end -- "contains administrative
+        # territorial entity" -- and it is written here as a child,parent pair
+        # like every other containment edge, so nothing downstream has to know
+        # which direction it arrived in. It is a separate array because it is
+        # a separate level of evidence: a division claiming a child is not the
+        # child claiming its parent, and stage 2 reads it only where P131
+        # alone gets a settlement no further than its country.
+        for child in cur.get('contains', ()):
+            if child.startswith('Q'):
+                p150.append(int(child[1:]))
+                p150.append(qid_num)
+                stats['p150_edges'] += 1
         for parent in cur.get('subclass_of', ()):
             if parent.startswith('Q'):
                 p279.append(qid_num)
                 p279.append(int(parent[1:]))
                 stats['p279_edges'] += 1
+
+        # Off the record before the keep test, so this adds an edge array and
+        # changes not one byte of entities/. P150 is wanted as a graph and
+        # never as a field, and an entity carrying nothing else is still not
+        # a place worth keeping.
+        cur.pop('contains', None)
 
         if not any(k in cur for k in KEEP_IF):
             return
@@ -458,6 +480,8 @@ def scan(stream, out_dir, progress_every=20_000_000):
 
     with open(os.path.join(out_dir, 'graph-p131.i32'), 'wb') as out:
         p131.tofile(out)
+    with open(os.path.join(out_dir, 'graph-p150.i32'), 'wb') as out:
+        p150.tofile(out)
     with open(os.path.join(out_dir, 'graph-p279.i32'), 'wb') as out:
         p279.tofile(out)
 
@@ -495,7 +519,8 @@ def main():
           % (stats['entities_seen'], stats['entities_kept'],
              100.0 * stats['entities_kept'] / max(1, stats['entities_seen']),
              stats['shards']))
-    print('graph: %d P131 edges, %d P279 edges' % (stats['p131_edges'], stats['p279_edges']))
+    print('graph: %d P131 edges, %d P150 edges, %d P279 edges'
+          % (stats['p131_edges'], stats['p150_edges'], stats['p279_edges']))
     print('labels: %d, alt labels: %d, bad lines: %d'
           % (stats['labels'], stats['alt_labels'], stats['bad_lines']))
 

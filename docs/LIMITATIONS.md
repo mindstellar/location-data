@@ -89,10 +89,35 @@ Spain.
 
 Each country also has **one region named after the country itself**, which
 catches settlements whose containment reaches no division. It appears only if
-something lands in it, which is why counts here are typically ISO + 1. It holds
-57,250 settlements across 249 countries, and for Lithuania 99% of them —
-[`UNPLACED-SETTLEMENTS.md`](UNPLACED-SETTLEMENTS.md) measures it per country and
-explains why `build-stats.json` reports a smaller number.
+something lands in it, which is why counts here are typically ISO + 1. In the
+2026-08-15 release it holds 57,250 settlements across 249 countries, and for
+Lithuania 99% of them — [`UNPLACED-SETTLEMENTS.md`](UNPLACED-SETTLEMENTS.md)
+measures it per country.
+
+Three things about it have since changed in the pipeline, and land in the next
+release.
+
+Containment now also reads **P150**, the parent's statement that it contains a
+division, which places 27,476 of those settlements — Lithuania alone accounts
+for 24,117 of them.
+
+What still reaches no division is placed by its **coordinate**, against Natural
+Earth's public-domain admin-1 boundaries. This is the one thing in the dataset
+Wikidata does not decide, and it is fenced in accordingly: it answers with an
+ISO 3166-2 code, the code must name a division already shipped for that
+country, it cannot cross a border, and it runs only after both directions of
+containment have failed. Where the code names a division at another level or
+from an older ISO edition — Natural Earth gives France its départements and
+this dataset ships régions — what it means here is learned from the settlements
+already placed inside it, and only where they are at least 90% agreed. Over the
+whole of the last release that places 45,666 settlements, on top of what P150
+reaches. It is optional: a build without
+`--boundaries` behaves as every released build has.
+
+And `build-stats.json` now carries `country_region` per country, counted on the
+rows that ship rather than on the containment failures alone, so the number can
+be checked against the published file. `no_division` is unchanged and still
+means what it always did: containment reached nothing.
 
 A short hand-maintained list corrects the cases the rule cannot see, because
 ISO itself carries entries that are not first-level divisions and nothing
@@ -276,7 +301,42 @@ or Finland. Listing them in both places would put one place under two ids.
 
 **Country-level regions.** A settlement whose containment reaches no division
 is filed under a region named for the country itself rather than dropped. This
-is why some countries have a region with the same name as the country.
+is why some countries have a region with the same name as the country. Its `id`
+is the country's own, its `iso_3166_2` is null, and its `place_type` is a
+country class — any of the three identifies it.
+
+It no longer has to be identified that way, and more usefully, the two things
+it means are now told apart. `sole` marks a country that has no subdivision at
+all — Gibraltar, the Vatican, Sint Maarten, seventeen in total, where this
+region is the only level and belongs in a picker like any other. `unassigned`
+marks the bucket, where a country has real divisions and these are the
+settlements none of them could hold. Exactly one of the two is true.
+
+Every settlement also carries **`admin1_source`**: `stated` where a containment
+statement upstream put it in its region, `boundary` where a coordinate falling
+inside a public-domain polygon did, `none` for the bucket. Over the last build
+that is 1,641,867 stated, 22,045 boundary and 4,714 none — 98.4%, 1.3%, 0.3%.
+The middle figure is this pipeline's inference rather than anyone's assertion,
+and a consumer that must be able to say "we know this address's region" should
+require the first.
+
+**One row per place.** A settlement that reaches no division and that upstream
+marks with P460 — *said to be the same as* — as being the same place as one
+that does is dropped, and the row with the division is kept. That removed 111
+rows from a build over the 11 August dump: a second "Warszawa" beside Warsaw, a
+second "Łódź", "Cochin" beside Kochi, an item labelled "do not use" two hundred
+metres from Stuttgart, and the ancient names of living cities — Ledra beside
+Nicosia, Naissus beside Niš, Arbela beside Erbil. None of the 111 carries a
+population and almost none carries any containment at all.
+
+Distance is not consulted. P460 links confusable places as readily as identical
+ones — Hoya in Lower Saxony to La Hoya in Salamanca, 1,778 km apart, or Loving
+County to Mentone, the county and its seat — and in every such pair both sides
+have a division, so asking which side is placed refuses them without measuring
+anything. Where both are placed, or neither is, nothing is dropped. It runs
+before the boundary lookup, because 92 of those rows fall inside a polygon and
+would otherwise be filed beside the row they duplicate under a different name,
+where nothing merges them.
 
 **Archaeology is excluded.** Ghost towns, abandoned villages, hillforts,
 Neolithic settlements and ancient cities are not current places and are left

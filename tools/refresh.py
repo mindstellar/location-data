@@ -7,6 +7,7 @@ resumed by running it again rather than started over:
 
     cache    pull the query cache from R2 if it is not already on disk
     dump     fetch the Wikidata truthy dump if it is not already on disk
+    borders  fetch Natural Earth's admin-1 boundaries, 15 MB, public domain
     scan     stage 1, ~90 minutes
     build    stage 2, ~7 minutes, keeping the last build as build.prev
     publish  validate, then upload a release and back the cache up
@@ -43,6 +44,15 @@ DUMP_URL = ('https://dumps.wikimedia.your.org/wikidatawiki/entities/'
             'latest-truthy.nt.gz')
 DUMP_NAME = 'latest-truthy.nt.gz'
 PARTS = 8
+
+# Natural Earth admin-1, public domain. The build's last resort for a
+# settlement whose containment says nothing at all -- see boundaries.py. Small
+# enough to fetch in one request and stable enough to cache forever; the file
+# is versioned in its own VERSION.txt rather than by URL, and a redownload is
+# fifteen megabytes.
+BORDERS_URL = ('https://naciscdn.org/naturalearth/10m/cultural/'
+               'ne_10m_admin_1_states_provinces.zip')
+BORDERS_NAME = 'ne_10m_admin_1_states_provinces.zip'
 
 
 def run(command, **kwargs):
@@ -166,11 +176,50 @@ def stage_dump(args):
     return target
 
 
+def stage_borders(args):
+    """Natural Earth's admin-1 boundaries, cached beside the dump.
+
+    Not required: without it the build runs exactly as it did before, and the
+    settlements that state no containment stay in the region named after their
+    country. So a download failure is a warning rather than an exit -- a
+    monthly refresh should not stop for a boundary file.
+    """
+    import requests
+
+    work = os.path.expanduser(args.work_dir)
+    os.makedirs(work, exist_ok=True)
+    path = os.path.join(work, BORDERS_NAME)
+    if os.path.exists(path) and os.path.getsize(path) > 1_000_000:
+        print('borders: reusing %s' % path)
+        return path
+    print('borders: fetching %s' % BORDERS_URL, flush=True)
+    try:
+        response = requests.get(BORDERS_URL, timeout=300)
+        response.raise_for_status()
+        with open(path + '.part', 'wb') as out:
+            out.write(response.content)
+        os.rename(path + '.part', path)
+    except Exception as error:                                  # noqa: BLE001
+        print('borders: %s -- building without them' % error)
+        return None
+    print('borders: %.1f MB' % (os.path.getsize(path) / 1e6))
+    return path
+
+
 def stage_scan(args):
     work = os.path.expanduser(args.work_dir)
     scan_dir = os.path.join(work, 'scan')
     if os.path.isdir(os.path.join(scan_dir, 'entities')) and not args.rescan:
         print('scan: reusing %s (pass --rescan to redo it)' % scan_dir)
+        # A scan taken before P150 and P460 were harvested builds cleanly and
+        # quietly leaves ~22,600 settlements in their country-named region --
+        # Lithuania's 22,070 among them -- and ships 93 rows twice. The build
+        # says so too, but it says it once in a line that scrolls past.
+        if not os.path.exists(os.path.join(scan_dir, 'graph-p150.i32')):
+            print('scan: this one predates the P150 graph and the P460 duplicate '
+                  'statements, so settlements whose only containment is stated by '
+                  'their parent will not be placed, and rows upstream calls the '
+                  'same place will ship twice -- --rescan to fix both')
         return scan_dir
     dump = os.path.join(work, DUMP_NAME)
     print('scan: this takes about 90 minutes', flush=True)
@@ -186,7 +235,7 @@ def stage_scan(args):
     return scan_dir
 
 
-def stage_build(args, scan_dir):
+def stage_build(args, scan_dir, borders=None):
     """Into a fixed directory, keeping exactly one previous build beside it.
 
     A build is about 2 GB and nothing used to remove one. Running dump_build.py
@@ -206,8 +255,11 @@ def stage_build(args, scan_dir):
         shutil.rmtree(previous, ignore_errors=True)
         os.rename(build_dir, previous)
         print('kept the last build as %s' % previous)
-    run([sys.executable, os.path.join(ROOT, 'dump_build.py'),
-         '--scan-dir', scan_dir, '--out-dir', build_dir])
+    command = [sys.executable, os.path.join(ROOT, 'dump_build.py'),
+               '--scan-dir', scan_dir, '--out-dir', build_dir]
+    if borders:
+        command += ['--boundaries', borders]
+    run(command)
     return build_dir
 
 
@@ -238,10 +290,11 @@ def main():
         stage_cache(args)
     if 'dump' not in skip:
         stage_dump(args)
+    borders = None if 'borders' in skip else stage_borders(args)
     scan_dir = (os.path.join(os.path.expanduser(args.work_dir), 'scan')
                 if 'scan' in skip else stage_scan(args))
     build_dir = (os.path.join(os.path.expanduser(args.work_dir), 'build')
-                 if 'build' in skip else stage_build(args, scan_dir))
+                 if 'build' in skip else stage_build(args, scan_dir, borders))
     if 'publish' not in skip:
         stage_publish(args, build_dir)
     return 0

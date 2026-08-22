@@ -88,7 +88,9 @@ a rule can be found by what it decides:
 contracts.py    slugify, COUNTRY_NAME_OVERRIDES, coordinate precision -- published
                 identity, frozen, and the reason it has its own module
 classify.py     the subclass closures, the three kinds of exclusion, is_settlement
-contain.py      P131 propagation, the four division tiers, CountryPlan
+contain.py      P131 and P150 propagation, the five division tiers, CountryPlan
+boundaries.py   Natural Earth admin-1, and the only thing here Wikidata does
+                not decide -- read its docstring before touching it
 naming.py       resolve_name and what makes a label usable at all
 countryblock.py the per-entity and per-country fact blocks
 emit.py         assembling a country and writing all three output formats

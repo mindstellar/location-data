@@ -332,12 +332,14 @@ def resolve_collisions(settlements, admin2_name, stats, region_qid):
 def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_records,
                   assign, settlement_classes, lang_codes, country_records, stats,
                   mode='admin1', refs=None, single_zone=None, exclude_classes=None,
-                  coarse=None, admin2_records=None):
+                  coarse=None, admin2_records=None, duplicate_of=None,
+                  from_boundary=frozenset()):
     """One country's canonical record, in the shape build_canonical_country()
     produces: neutral field names, nothing synthesised, and a region with no
     settlements is simply a region with an empty list.
     """
     refs = refs or {}
+    duplicate_of = duplicate_of or {}
     single_zone = single_zone or {}
     timezone_id = single_zone.get(iso2.upper())
     country_record = country_records.get(country_qid)
@@ -373,6 +375,14 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
                 if not is_settlement(record, settlement_classes, exclude_classes):
                     continue
                 if record['id'] in written:
+                    continue
+                # Upstream says this is the same place as a row that has a
+                # division, and this one has none. Dropped rather than merged:
+                # there is nothing on it worth absorbing -- no parent, no
+                # population, one sitelink -- and merging would take its name
+                # as an alternative for a place that already has one.
+                if record['id'] in duplicate_of:
+                    stats['said_to_be_a_duplicate'] += 1
                     continue
                 written.add(record['id'])
                 seen += 1
@@ -419,10 +429,28 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
                 clean, upstream_qualifier = strip_qualifier(clean)
                 if upstream_qualifier:
                     stats['stripped_qualifiers'] += 1
+                # Where the region on this row came from. 'stated' is a
+                # containment statement upstream -- P131, or P150 from the
+                # parent's side. 'boundary' is a coordinate falling inside a
+                # public-domain polygon, which is this pipeline's inference and
+                # not anyone's assertion. 'none' is the region named after the
+                # country, which is not a division at all.
+                #
+                # A consumer that must be able to say "we know this address's
+                # region" filters on the first of those. Nothing in the record
+                # said which before, so the 2.7% that geometry placed was
+                # indistinguishable from the 96.9% that upstream states.
+                if admin1_qid == country_qid and mode != 'country':
+                    admin1_source = 'none'
+                elif record['id'] in from_boundary:
+                    admin1_source = 'boundary'
+                else:
+                    admin1_source = 'stated'
                 settlement = {
                     'id': record['id'],
                     'source': SOURCE,
                     'admin1_id': admin1_qid,
+                    'admin1_source': admin1_source,
                     'country_code': iso2,
                     'name': clean,
                     'name_lang': name_lang,
@@ -468,6 +496,15 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
         by_region[admin1_qid] = resolve_collisions(by_region[admin1_qid],
                                                    admin2_name, stats, admin1_qid)
 
+    # How many rows ship inside the region named after the country -- the
+    # fallback for a settlement with no division, and for a tier-4 country the
+    # only region there is. Counted here, on the rows that actually ship, and
+    # not from any earlier counter: a settlement whose division was resolved
+    # and then removed by the region exclusions lands here too, having
+    # incremented nothing on the way. That gap was the whole of issue #1 --
+    # Lithuania reported 43 while 23,193 shipped in the region.
+    stats['country_region'] = len(by_region.get(country_qid, ()))
+
     regions = []
     emit = dict(admin1_selected)
     emit.update(used_coarse)
@@ -491,6 +528,14 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
         if not settlements:
             stats['empty_regions'] += 1
 
+        # Two things have been sharing one record shape, and a consumer had
+        # to infer which it was holding. A region named after its country is
+        # the *only* level some countries have -- Gibraltar, the Vatican,
+        # Sint Maarten have no subdivision and never will -- and for the rest
+        # it is where the settlements no division could hold end up. The first
+        # is a division for every practical purpose and belongs in a picker;
+        # the second is a bucket and does not.
+        sole = mode == 'country' or len(emit) == 1
         region = {
             'id': admin1_qid,
             'source': SOURCE,
@@ -499,6 +544,8 @@ def build_country(iso2, country_qid, shard_files, admin1_selected, admin1_record
             'slug': slugify(name),
             'name_lang': name_lang,
             'iso_3166_2': iso_code,
+            'sole': admin1_qid == country_qid and sole,
+            'unassigned': admin1_qid == country_qid and not sole,
             'latitude': lat_s,
             'longitude': lng_s,
         }
@@ -542,6 +589,7 @@ def write_canonical_ndjson(country, data_dir):
             'country_code': region['country_code'],
             'name': region['name'], 'slug': region['slug'], 'name_lang': region['name_lang'],
             'iso_3166_2': region['iso_3166_2'],
+            'sole': region['sole'], 'unassigned': region['unassigned'],
             'latitude': region['latitude'], 'longitude': region['longitude'],
         }
         line.update({k: region[k] for k in extra_keys})

@@ -5,8 +5,9 @@ propagation is even aiming at, and the propagation decides whether the
 selection was any good -- a country can pick a perfectly reasonable tier that
 nothing can actually reach, which is why the fallbacks in pipeline.py exist.
 
-Everything here reads the flat P131 array. It is never indexed or sorted: the
-dump is only nearly QID-ordered, so a binary search over it is quietly wrong,
+Everything here reads the flat containment arrays -- P131, and P150 where a
+parent states the link its children do not. Neither is ever indexed or sorted:
+the dump is only nearly QID-ordered, so a binary search over it is quietly wrong,
 and a child->parents dict over 15M edges costs more memory than the machine
 has. Rescanning until nothing changes converges in the depth of the containment
 graph, which is single digits.
@@ -43,6 +44,11 @@ class CountryPlan:
     the leaf-most rule set aside, seeded further out so they catch only what
     would otherwise reach nothing. `mode` is 'admin1' unless the country has no
     usable tier at all, in which case one synthesised region stands for it.
+
+    `tier` records which question answered: 1 the P300 codes, 2 the country's
+    administrative P131 children, 3 the P300 codes with the dissolved
+    exclusions lifted, 4 the administrative entities the country's P17 claims,
+    5 nothing answered and the country stands for itself.
     """
 
     __slots__ = ('iso2', 'country_qid', 'leaf', 'coarse', 'mode', 'tier')
@@ -78,20 +84,26 @@ class CountryPlan:
         self._make_country_resolvable(country_records, admin1_candidates)
 
     def use_country_as_region(self, country_records, admin1_candidates):
-        """Tier 4: no usable division tier exists, so one synthesised region
+        """Tier 5: no usable division tier exists, so one synthesised region
         stands for the country and settlements come from its own P17 rather
         than from containment. Reached twice -- when no tier is found at all,
         and when a tier is found but nothing can reach it.
         """
         self.leaf = {self.country_qid: None}
         self.mode = 'country'
-        self.tier = 4
+        self.tier = 5
         self._make_country_resolvable(country_records, admin1_candidates)
 
 
-def propagate_containment(p131, seeds):
+def propagate_containment(p131, seeds, also=()):
     """Map every entity that reaches a seed through P131+ to its *nearest*
     seed, measured in P131 hops.
+
+    `also` are further child,parent edge arrays read alongside P131 in the same
+    rounds -- the P150 graph, and nothing else today. They are passed rather
+    than concatenated because the caller runs this twice and keeps the two
+    answers apart: what P131 alone can prove, and what the second graph adds on
+    top of it.
 
     `seeds` maps a division QID to its packed starting value, so a caller can
     start some divisions one level "further away" than others -- which is how a
@@ -108,22 +120,48 @@ def propagate_containment(p131, seeds):
     of them to the United States -- leaving Puerto Rico with 99 regions and no
     cities. Depth first, then lowest QID for determinism at equal depth.
     """
+    graphs = (p131,) + tuple(also)
     assign = dict(seeds)
     for round_n in range(MAX_PROPAGATION_ROUNDS):
         changed = 0
-        for i in range(0, len(p131), 2):
-            packed_parent = assign.get(p131[i + 1])
-            if packed_parent is None:
-                continue
-            candidate = packed_parent + DEPTH_SCALE
-            child = p131[i]
-            current = assign.get(child)
-            if current is None or candidate < current:
-                assign[child] = candidate
-                changed += 1
+        for edges in graphs:
+            for i in range(0, len(edges), 2):
+                packed_parent = assign.get(edges[i + 1])
+                if packed_parent is None:
+                    continue
+                candidate = packed_parent + DEPTH_SCALE
+                child = edges[i]
+                current = assign.get(child)
+                if current is None or candidate < current:
+                    assign[child] = candidate
+                    changed += 1
         if not changed:
             return {qid: packed % DEPTH_SCALE for qid, packed in assign.items()}, round_n + 1
     raise RuntimeError('P131 propagation did not converge in %d rounds' % MAX_PROPAGATION_ROUNDS)
+
+
+def rescue_with_contains(p131, p150, division_seeds):
+    """A second answer for the settlements P131 alone leaves at their country.
+
+    Wikidata records containment from both ends. P131 is the child naming its
+    parent, and it is what the first pass walks; P150 is the parent listing its
+    children, and for whole countries it is the only statement of the link that
+    exists. Lithuania is the case that forced this: every one of its 60
+    municipalities points P131 straight at Lithuania -- the county
+    administrations were abolished in 2010, so the county edge carries an end
+    date and is not truthy -- while the ten counties still list their
+    municipalities under P150. 23,193 of Lithuania's 23,404 settlements
+    therefore reached nothing but the country, against 211 in the counties.
+
+    Seeded from the divisions alone, never from the country-level fallback, so
+    what comes back is either a real division or nothing at all. The caller
+    keeps the P131 answer wherever there is one and reads this only where there
+    is not, which is what makes a P150 edge unable to outrank a stated parent.
+    """
+    if not p150:
+        return {}
+    assign, _rounds = propagate_containment(p131, division_seeds, also=(p150,))
+    return assign
 
 
 # --- selecting a country's divisions ----------------------------------------
@@ -306,6 +344,57 @@ def select_admin1s_under_country(country_qid, country_children, records,
             if cls in admin_classes:
                 selected[child] = None
                 break
+    return selected
+
+
+def select_admin1s_by_p17(country_qid, containers, admin_classes,
+                          not_a_place=frozenset()):
+    """Tier 4: the administrative entities the country's own settlements say
+    they are in, for a country whose divisions are not attached to it by
+    containment at all.
+
+    Tier 2 asks which administrative entities the country contains, which is
+    the right question everywhere it can be answered. The Faroe Islands cannot
+    answer it: its six sysslur state no P131 whatsoever -- not a wrong parent,
+    none -- so nothing is a child of Q4628 and tier 2 comes back empty. The
+    hierarchy is all there, 147 of 149 settlements filed under one of 33
+    municipalities and every municipality inside a syssla, and it is simply not
+    joined upward to the country. The only statement tying it to the Faroes is
+    P17, which is also what dump_scan.py shards on, so the whole of it sits in
+    one file and provably nowhere else.
+
+    So the question is asked from underneath instead: what do this country's
+    settlements say contains them, and what contains that. `containers` is that
+    answer -- the ancestors of the country's settlements, which is a far
+    narrower thing than everything the country claims. Asking the country
+    claimed the Cook Islands 26 regions, most of them its own villages and one
+    of them an electorate, and gave the Vatican a charity.
+
+    `keep_root_most` then does what it does everywhere else, which is why the
+    Faroes come out as six sysslur rather than 33 municipalities: the same rule
+    that gives France its regions rather than its departements.
+
+    Twenty-one countries ship one region named after themselves, holding 326
+    settlements, and 237 of those settlements have a container recorded
+    upstream. This is what was never asked for them.
+    """
+    selected = {}
+    for qid, record in containers.items():
+        if qid == country_qid:
+            continue
+        if record.get('dissolved') or record.get('end_time'):
+            continue
+        if is_country_item(record):
+            continue
+        if is_not_a_place(record, not_a_place):
+            continue
+        if qid in REGION_EXCLUDE_QIDS:
+            continue
+        classes = [int(c[1:]) for c in record.get('instance_of', ()) if c.startswith('Q')]
+        if set(classes) & REGION_EXCLUDE_CLASSES:
+            continue
+        if any(cls in admin_classes for cls in classes):
+            selected[qid] = None
     return selected
 
 

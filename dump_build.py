@@ -30,6 +30,7 @@ Usage:
 """
 
 import argparse
+import array
 import glob
 import hashlib
 import json
@@ -49,16 +50,19 @@ from classify import (
     load_edges,
     subclass_closure,
 )
+from boundaries import Admin1Boundaries, learn_code_map
 from contain import (
     DEPTH_SCALE,
     CountryPlan,
     keep_root_most,
     propagate_containment,
+    rescue_with_contains,
     select_admin1s,
+    select_admin1s_by_p17,
     select_admin1s_under_country,
     select_admin1s_with_dissolved,
 )
-from countryblock import single_timezone_by_country
+from countryblock import parse_point, single_timezone_by_country
 from emit import (
     build_country,
     write_canonical_ndjson,
@@ -123,6 +127,11 @@ def main():
     parser.add_argument('--bucket-dir',
                         help='keep the grouped settlements here instead of in a '
                              'temporary directory that is removed on success')
+    parser.add_argument('--boundaries',
+                        help='Natural Earth admin-1 zip, for placing settlements '
+                             'whose containment reaches no division at all. '
+                             'Optional: without it those settlements ship in the '
+                             'region named after their country, as they always have')
     args = parser.parse_args()
 
     started = time.monotonic()
@@ -131,10 +140,29 @@ def main():
     single_zone = single_timezone_by_country()
     print('IANA tzdb: %d single-timezone countries' % len(single_zone), flush=True)
 
+    # Loaded first, so a bad path fails in a second rather than ninety minutes
+    # in. Public domain, and the only non-Wikidata source that decides anything
+    # about a place here -- see boundaries.py for why it is allowed to and what
+    # keeps it narrow.
+    boundaries = None
+    if args.boundaries:
+        boundaries = Admin1Boundaries(args.boundaries)
+        print('Natural Earth: %d admin-1 polygons carrying an ISO 3166-2 code, '
+              'across %d countries' % (len(boundaries), len(boundaries.countries())),
+              flush=True)
+
     print('loading graphs...', flush=True)
     p279 = load_edges(os.path.join(args.scan_dir, 'graph-p279.i32'))
     p131 = load_edges(os.path.join(args.scan_dir, 'graph-p131.i32'))
-    print('  P279 %d edges, P131 %d edges' % (len(p279) // 2, len(p131) // 2), flush=True)
+    # Optional, so a scan taken before P150 was harvested still builds -- it
+    # simply builds without the rescue, which is what every release up to now
+    # did. Missing is not an error; silently behaving differently would be, so
+    # it is printed either way.
+    p150_path = os.path.join(args.scan_dir, 'graph-p150.i32')
+    p150 = load_edges(p150_path) if os.path.exists(p150_path) else array.array('i')
+    print('  P279 %d edges, P131 %d edges, P150 %d edges%s'
+          % (len(p279) // 2, len(p131) // 2, len(p150) // 2,
+             '' if p150 else ' (this scan has none)'), flush=True)
 
     print('computing settlement class closure...', flush=True)
     settlement_classes = subclass_closure(p279, list(SETTLEMENT_ROOTS))
@@ -272,15 +300,17 @@ def main():
     needs_fallback = [c for c in wanted if not plans[c].leaf]
     fallback_records = {}
     country_children = {}
-    admin_classes = set()
+    # Blocked, like every other closure here: without it "military area" makes
+    # gun batteries administrative divisions. Computed whether or not any
+    # country needs a fallback tier now, because the attachment fallback below
+    # asks for it long after this point and cannot know in advance.
+    admin_classes = subclass_closure(p279, [Q_ADMIN_TERRITORIAL_ENTITY],
+                                     CLOSURE_BLOCKED)
+
     if needs_fallback:
         print('  %d countries have no P300 tier: %s'
               % (len(needs_fallback), ', '.join(needs_fallback)), flush=True)
 
-        # Blocked, like every other closure here: without it "military area"
-        # makes gun batteries administrative divisions.
-        admin_classes = subclass_closure(p279, [Q_ADMIN_TERRITORIAL_ENTITY],
-                                         CLOSURE_BLOCKED)
         fallback_qids = {countries[c] for c in needs_fallback if c in countries}
         country_children = {}
         for i in range(0, len(p131), 2):
@@ -304,6 +334,99 @@ def main():
                         refs[record['id']] = record
         fallback_records.update(refs)
 
+    def divisions_the_settlements_claim(country_qid):
+        """Tier 4: what this country's own settlements say contains them.
+
+        Everything involved is in one file. dump_scan.py shards on P17, and a
+        division of the Faroes carries P17 = Faroe Islands exactly as its
+        villages do, so the whole hierarchy -- and nothing else -- is in the
+        country's own shard.
+
+        Returns (selected, records, assignment): the divisions, the shard, and
+        where each of its settlements lands, which the caller needs when this
+        runs too late for containment propagation to do it.
+        """
+        shard = os.path.join(entities_dir, '%d.jsonl' % country_qid)
+        if not os.path.exists(shard):
+            return {}, {}, {}
+        claimed = {}
+        with open(shard, encoding='utf-8') as handle:
+            for line in handle:
+                record = json.loads(line)
+                claimed[record['id']] = record
+        settlements = [record for record in claimed.values()
+                       if is_settlement(record, settlement_classes, exclude_classes)]
+
+        def parents_of(qid):
+            for parent in (claimed.get(qid) or {}).get('located_in', ()):
+                if parent.startswith('Q'):
+                    number = int(parent[1:])
+                    if number in claimed:
+                        yield number
+
+        ancestors = {}
+        frontier = [record['id'] for record in settlements]
+        for _hop in range(12):
+            nxt = []
+            for node in frontier:
+                for parent in parents_of(node):
+                    if parent not in ancestors:
+                        ancestors[parent] = claimed[parent]
+                        nxt.append(parent)
+            if not nxt:
+                break
+            frontier = nxt
+        # Walked through, never selected. A Faroese village sits in a
+        # municipality and the municipality in a syssla, and a municipality is
+        # a settlement by this pipeline's own rule -- so the chain has to pass
+        # through it to reach the division above. Selecting it instead is how
+        # the Cook Islands came out with Avarua, a town, as a region holding
+        # the suburb next to it.
+        containers = {qid: record for qid, record in ancestors.items()
+                      if not is_settlement(record, settlement_classes, exclude_classes)}
+        selected = select_admin1s_by_p17(country_qid, containers, admin_classes,
+                                         not_a_place)
+        if not selected:
+            return {}, claimed, {}
+
+        def all_ancestors(qid, depth=12):
+            seen, frontier = set(), [qid]
+            for _ in range(depth):
+                nxt = []
+                for node in frontier:
+                    for parent in parents_of(node):
+                        if parent not in seen:
+                            seen.add(parent)
+                            nxt.append(parent)
+                if not nxt:
+                    break
+                frontier = nxt
+            return seen
+
+        selected = keep_root_most(selected, all_ancestors)
+
+        # Nearest first, so a settlement inside a municipality inside a syssla
+        # lands in the syssla and not in whatever else is above it. Ties break
+        # on the lowest id, as everywhere.
+        assignment = {}
+        for record in settlements:
+            frontier, seen = [record['id']], {record['id']}
+            for _ in range(12):
+                hit = sorted(node for node in frontier if node in selected)
+                if hit:
+                    assignment[record['id']] = hit[0]
+                    break
+                nxt = []
+                for node in frontier:
+                    for parent in parents_of(node):
+                        if parent not in seen:
+                            seen.add(parent)
+                            nxt.append(parent)
+                if not nxt:
+                    break
+                frontier = nxt
+        return selected, claimed, assignment
+
     if needs_fallback:
         for iso2 in needs_fallback:
             plan = plans[iso2]
@@ -324,6 +447,18 @@ def main():
                 plan.leaf = tier3
                 plan.tier = 3
                 continue
+
+            # Tier 4: the divisions its own settlements name. Reached here
+            # only when tier 2 found nothing at all; a tier that was found and
+            # turns out to reach nothing is caught after grouping, where the
+            # attachment fallback can see that it attached nothing.
+            tier4, records, _assignment = divisions_the_settlements_claim(plan.country_qid)
+            if tier4:
+                plan.leaf = tier4
+                plan.tier = 4
+                admin1_candidates.update({q: records[q] for q in tier4})
+                continue
+
             plan.use_country_as_region(country_records, admin1_candidates)
 
     seeds = {}
@@ -339,6 +474,12 @@ def main():
             # One level further out, so a leaf division still wins wherever
             # both are reachable and this only catches the otherwise-orphaned.
             seeds.setdefault(qid, qid + DEPTH_SCALE)
+
+    # What the P150 rescue is allowed to answer with: the real divisions, and
+    # nothing else. Taken here, before the country-level seeds are added below,
+    # so a rescue can move a settlement from its country to a division and
+    # never the other way about.
+    division_seeds = dict(seeds)
 
     # Last resort: the country itself, three levels out so it loses to every
     # real division. A great many settlements -- including twenty of the
@@ -375,6 +516,18 @@ def main():
     print('propagating containment...', flush=True)
     assign, rounds = propagate_containment(p131, seeds)
     print('  %d entities attached to a division in %d rounds' % (len(assign), rounds), flush=True)
+
+    # The same walk again with P150 read backwards alongside P131, for the
+    # settlements the first pass leaves at their country. Kept in its own map
+    # rather than merged here: which of the two answers wins is decided per
+    # settlement below, where the country it belongs to is known and a P150
+    # edge that crosses a border can be refused.
+    contains_assign = {}
+    if p150:
+        print('re-walking with P150 for what reached no division...', flush=True)
+        contains_assign = rescue_with_contains(p131, p150, division_seeds)
+        print('  %d entities reachable when a parent may state the link'
+              % len(contains_assign), flush=True)
 
     # Settlements are grouped by the country of the division that contains
     # them, not by the shard they were stored in. A shard is keyed on P17, and
@@ -413,6 +566,17 @@ def main():
     country_level = {plans[iso2].country_qid: iso2 for iso2 in wanted
                      if plans[iso2].mode == 'admin1' and plans[iso2].country_qid is not None}
 
+    # (ISO2, ISO 3166-2) -> division, which is the whole vocabulary the boundary
+    # lookup is allowed to answer in. A polygon whose code is not in here names
+    # a division this build does not ship -- Natural Earth carries Nepal's old
+    # zones and Ivory Coast's old regions -- and its answer is dropped rather
+    # than approximated.
+    division_by_code = {}
+    for iso2 in wanted:
+        for qid, code in plans[iso2].leaf.items():
+            if code:
+                division_by_code[(iso2, code)] = qid
+
     tier4_country = {}
     for iso2 in wanted:
         if plans[iso2].mode == 'country':
@@ -446,6 +610,23 @@ def main():
     handles = {}
     orphans = {}
     seen_counts = {}
+    rescued_by_contains = {}
+    placed_by_boundary = {}
+    unheld = {}
+    # P460, "said to be the same as", read only in the one direction that is
+    # safe: a settlement upstream calls the same thing as another one, and
+    # which of the two has a division decides which is the real row. Recorded
+    # here rather than after the rescues below, because containment is the
+    # question -- a duplicate that a boundary lookup can place is still a
+    # duplicate, and placing it files it beside the row it duplicates under a
+    # different name, where nothing will merge them.
+    same_as_rows = {}
+    same_as_targets = set()
+    # Per country, for build-stats.json. Counted where the decision is made,
+    # so these are placements attempted rather than rows shipped -- a settlement
+    # placed here can still be dropped later for having no usable name.
+    by_contains = {}
+    by_boundary = {}
     for name in sorted(os.listdir(entities_dir)):
         if not name.endswith('.jsonl'):
             continue
@@ -455,9 +636,56 @@ def main():
                 if not is_settlement(record, settlement_classes, exclude_classes):
                     continue
                 assigned = assign.get(record['id'])
+                if record.get('same_as') and (assigned is None or assigned in country_level):
+                    targets = [int(q[1:]) for q in record['same_as'] if q.startswith('Q')]
+                    if targets:
+                        same_as_rows[record['id']] = targets
+                        same_as_targets.update(targets)
                 iso2 = admin1_country.get(assigned)
                 home = record.get('country')
                 home_qid = int(home[1:]) if home and home.startswith('Q') else None
+                # Nothing but the country, or nothing at all: ask the P150
+                # graph, and take its answer only for a division of the country
+                # this settlement already belongs to. Containment stated by a
+                # parent is weaker evidence than containment stated by the
+                # child, so it must not be able to move a place across a border
+                # -- the failure the depth ordering exists to prevent, arriving
+                # by another route.
+                if assigned is None or assigned in country_level:
+                    better = contains_assign.get(record['id'])
+                    home_iso2 = (admin1_country.get(assigned) or tier4_country.get(home_qid)
+                                 or country_of.get(home_qid))
+                    if better is not None and admin1_country.get(better) == home_iso2:
+                        rescued_by_contains[record['id']] = better
+                        by_contains[home_iso2] = by_contains.get(home_iso2, 0) + 1
+                        assigned = better
+                        iso2 = home_iso2
+                    elif boundaries is not None and home_iso2 is not None:
+                        # Nothing states where this is, from either end. It has
+                        # a point, and divisions have boundaries: 863 of India's
+                        # 966 unplaced rows are here, carrying a country, a
+                        # class and a coordinate and nothing else. The code has
+                        # to name a division of the country the settlement
+                        # already belongs to or it is not used.
+                        lat, lng = parse_point(record.get('coord'))
+                        if lat is not None:
+                            in_division = division_by_code.get(
+                                (home_iso2, boundaries.code_at(lat, lng)))
+                            if in_division is not None:
+                                placed_by_boundary[record['id']] = in_division
+                                by_boundary[home_iso2] = by_boundary.get(home_iso2, 0) + 1
+                                assigned = in_division
+                                iso2 = home_iso2
+                    # Still nowhere after both rescues: either nothing contains
+                    # it, or its own country is standing in for a division.
+                    # Counted per country, because this and not the orphan
+                    # count is what says a division tier is failing to hold the
+                    # settlements it was selected for. Burundi's 473 all have a
+                    # containment chain -- it reaches the country and stops --
+                    # so the orphan count sees 0 of them.
+                    if assigned is None or assigned in country_level:
+                        if home_iso2:
+                            unheld[home_iso2] = unheld.get(home_iso2, 0) + 1
                 if iso2 is None and home_qid is not None:
                     iso2 = tier4_country.get(home_qid)
                 if iso2 is None:
@@ -487,6 +715,18 @@ def main():
     print('  %d settlements grouped into %d countries'
           % (sum(seen_counts.values()), len(handles)), flush=True)
 
+    # Merged only now, and only for settlements: the rescue is a decision about
+    # places, not a correction to the containment graph, and build_country
+    # reads this same map to file each row under a region.
+    if rescued_by_contains:
+        assign.update(rescued_by_contains)
+        print('  %d of them reached a division only because a parent listed them'
+              % len(rescued_by_contains), flush=True)
+    if placed_by_boundary:
+        assign.update(placed_by_boundary)
+        print('  %d more state no containment at all and were placed by their '
+              'coordinates' % len(placed_by_boundary), flush=True)
+
     # Attachment fallback. A country can select a perfectly good division tier
     # and still attach almost nothing to it, when its settlements' P131 points
     # somewhere the selected divisions cannot be reached from. Singapore is the
@@ -511,18 +751,79 @@ def main():
     # labels are unusable, and shipped with no regions and no cities at all
     # until the floor came down to five.
     rescued = []
+    claimed_tier4 = []
     for iso2 in wanted:
         plan = plans[iso2]
         if plan.mode == 'country':
             continue
-        attached = seen_counts.get(iso2, 0) - orphans.get(iso2, 0)
-        stranded = orphans.get(iso2, 0)
-        if stranded >= 5 and attached < stranded * 0.25:
+        attached = seen_counts.get(iso2, 0) - unheld.get(iso2, 0)
+        stranded = unheld.get(iso2, 0)
+        # The flatten decision below keeps the number it was written for: what
+        # reached no division whatsoever, rather than what reached only the
+        # country. Widening that one would take countries whose tier is real
+        # and merely partial and throw it away.
+        no_division = orphans.get(iso2, 0)
+        if stranded >= 5 and attached < stranded:
             if plan.country_qid is None:
+                continue
+            # A tier that was selected and then failed to hold the country's
+            # settlements is asked to justify itself, at a far looser threshold
+            # than the one that flattens a country: more stranded than attached
+            # is enough to ask. Burundi is why. Its eighteen provinces became
+            # five in 2025, sixteen of the old ones carry a dissolution date,
+            # and the two survivors that still hold an ISO code are all tier 1
+            # could select -- so 473 of its 594 settlements attached to nothing
+            # while the five current provinces sat in its own shard, named by
+            # those very settlements. It missed the old trigger by three rows.
+            #
+            # Before flattening the country, ask tier 4's question. A tier that
+            # was selected and then attached nothing is the same situation as
+            # no tier at all, and it is the commoner one: the Faroe Islands
+            # reach tier 2, because a handful of administrative items do point
+            # P131 at the country, and then 0 of 155 settlements attach to them
+            # -- while 147 sit under one of 33 municipalities, every
+            # municipality inside a syssla, none of which says anything about
+            # the country except P17.
+            #
+            # Too late for containment propagation, which has already run, so
+            # the assignment comes back with the divisions. It can: everything
+            # in the chain is in the one shard, and the walk is a few hundred
+            # settlements rather than the whole graph.
+            claimed_leaf, records, assignment = divisions_the_settlements_claim(
+                plan.country_qid)
+            # It has to be a decisive improvement, not a marginal one. The
+            # Marshall Islands traded 27 real divisions for 7 in order to place
+            # one more settlement, and Kiribati offered to trade its three
+            # ISO-coded island groups for five uncoded divisions to place four
+            # more. Burundi's five provinces place 615 against 121, which is
+            # what a tier that is actually right looks like.
+            if claimed_leaf and len(assignment) >= max(attached * 2, attached + 5):
+                plan.leaf = claimed_leaf
+                plan.tier = 4
+                admin1_candidates.update({q: records[q] for q in claimed_leaf})
+                assign.update(assignment)
+                claimed_tier4.append((iso2, len(assignment), attached + stranded))
+                continue
+            # Only now the blunt one. Asking tier 4 is safe at any threshold --
+            # it is taken only if it places more than what it replaces -- but
+            # flattening a country into one region is not, so that keeps the
+            # narrow trigger it was given: fewer than a fifth of the country's
+            # settlements attaching at all. Sri Lanka sat at 629 against 2,243
+            # and must not trip it; Burundi sits at 121 against 473 and must
+            # not either, because what it needs is a better tier and it has
+            # just been offered one.
+            if seen_counts.get(iso2, 0) - no_division >= no_division * 0.25:
                 continue
             plan.use_country_as_region(country_records, admin1_candidates)
             tier4_country[plan.country_qid] = iso2
-            rescued.append((iso2, attached, stranded))
+            rescued.append((iso2, seen_counts.get(iso2, 0) - no_division, no_division))
+
+    if claimed_tier4:
+        print('  %d countries selected a tier that reached nothing and take their '
+              'divisions from what their settlements name instead: %s'
+              % (len(claimed_tier4), ', '.join(
+                  '%s (%d of %d)' % (c, n, total) for c, n, total in claimed_tier4)),
+              flush=True)
 
     if rescued:
         print('  %d countries attached almost nothing and fall back to a country-level '
@@ -589,16 +890,94 @@ def main():
     # one. It is what tells two same-named places in one region apart. The
     # buckets are read rather than the passes above hooked, because both of
     # them feed the buckets and this is the one point that sees the final set.
+    #
+    # The same read also answers a second question, because reading 1.8 GB of
+    # buckets twice to ask two things about the same rows is a minute of the
+    # build for nothing: which settlements still have no division, and -- for
+    # the countries that have any -- what Natural Earth's codes mean here.
+    #
+    # That mapping cannot be known earlier. It is learned from the settlements
+    # containment has already placed, so it needs every placement made and the
+    # tier-4 rescue settled, which is exactly now. See learn_code_map().
     admin2_wanted = set()
+    translated = {}
+    by_code_map = {}
+    placed_targets = set()
+    country_qids = {plans[iso2].country_qid for iso2 in wanted}
     for iso2 in wanted:
         path = os.path.join(bucket_dir, '%s.jsonl' % iso2)
         if not os.path.exists(path):
             continue
+        placed, unplaced = [], []
         with open(path, encoding='utf-8') as handle:
             for line in handle:
-                located = json.loads(line).get('located_in') or []
+                record = json.loads(line)
+                located = record.get('located_in') or []
                 if located and located[0].startswith('Q'):
                     admin2_wanted.add(int(located[0][1:]))
+                division = assign.get(record['id'])
+                if record['id'] in same_as_targets and division is not None \
+                        and division not in country_qids:
+                    placed_targets.add(record['id'])
+                if boundaries is None or plans[iso2].mode == 'country':
+                    continue
+                if division is not None and division not in country_qids:
+                    placed.append((record['id'], record.get('coord'), division))
+                else:
+                    unplaced.append((record['id'], record.get('coord')))
+        if boundaries is None or not unplaced or not placed:
+            continue
+        # Codes for the unplaced first. If none of them fall in a polygon at
+        # all there is nothing a mapping could be used for, and the country's
+        # placed settlements -- 154,051 of them for Russia -- are not walked.
+        wanted_codes = {}
+        for qid, point in unplaced:
+            lat, lng = parse_point(point)
+            code = boundaries.code_at(lat, lng) if lat is not None else None
+            if code is not None:
+                wanted_codes[qid] = code
+        if not wanted_codes:
+            continue
+        samples = []
+        for _qid, point, division in placed:
+            lat, lng = parse_point(point)
+            if lat is None:
+                continue
+            code = boundaries.code_at(lat, lng)
+            if code is not None:
+                samples.append((code, division, lat, lng))
+        learned = learn_code_map(samples, well_inside=boundaries.well_inside)
+        for qid, code in wanted_codes.items():
+            division = learned.get(code)
+            if division is not None:
+                translated[qid] = division
+                by_code_map[iso2] = by_code_map.get(iso2, 0) + 1
+    # One row per place. A settlement that reaches no division and that
+    # upstream says is the same thing as one that does is that one, recorded
+    # twice: "Warszawa" beside Warsaw, "Cochin" beside Kochi, and an item
+    # labelled "do not use" two hundred metres from Stuttgart. The row with the
+    # division is the one with the evidence, and it is the one that ships.
+    #
+    # Distance is deliberately not consulted. P460 links confusable places as
+    # readily as identical ones -- Hoya in Lower Saxony to La Hoya in Salamanca,
+    # 1,778 km apart -- and every such pair has a division on both sides, so
+    # asking which side is placed refuses them without measuring anything.
+    duplicate_of = {}
+    for qid, targets in same_as_rows.items():
+        for target in targets:
+            if target in placed_targets:
+                duplicate_of[qid] = target
+                break
+    if duplicate_of:
+        print('  %d settlements state no division and are said to be the same as one '
+              'that does; the placed row is the one kept' % len(duplicate_of), flush=True)
+
+    from_boundary = set(placed_by_boundary) | set(translated)
+
+    if translated:
+        assign.update(translated)
+        print('  %d settlements placed by reading Natural Earth\'s codes against the '
+              'divisions this build ships' % len(translated), flush=True)
 
     admin2_records = {q: admin1_candidates[q] for q in admin2_wanted
                       if q in admin1_candidates}
@@ -625,7 +1004,8 @@ def main():
         # Starts at zero, not at the grouping pass's orphan count: those are
         # now handed to the country-level region rather than dropped, so what
         # this counts is what build_country could genuinely not place.
-        stats = {'orphan': 0, 'no_label': 0, 'no_coord': 0,
+        stats = {'orphan': 0, 'no_label': 0, 'no_coord': 0, 'country_region': 0,
+                 'said_to_be_a_duplicate': 0,
                  'empty_regions': 0, 'region_no_label': 0, 'coarse_regions': 0,
                  'merged_duplicates': 0, 'ambiguous_names': 0,
                  'stripped_qualifiers': 0, 'upstream_qualifier_kept': 0,
@@ -637,7 +1017,8 @@ def main():
             settlement_classes, lang_codes, country_records, stats,
             mode=plan.mode, refs=refs, single_zone=single_zone,
             exclude_classes=exclude_classes, coarse=plan.coarse,
-            admin2_records=admin2_records)
+            admin2_records=admin2_records, duplicate_of=duplicate_of,
+            from_boundary=from_boundary)
 
         data_filename, data_digest, data_bytes = write_canonical_ndjson(country, data_dir)
         json_filename, json_digest, json_bytes = write_country_json(country, json_dir)
@@ -675,6 +1056,18 @@ def main():
             'settlements_seen': seen, 'orphan': stats['orphan'],
             'orphan_rate': round(stats['orphan'] / seen, 4) if seen else None,
             'no_division': orphans.get(iso2, 0),
+            # What `no_division` does not say. It counts a failure of
+            # containment; this counts the rows that ship in the country-named
+            # region however they got there, so it can be checked against the
+            # published file rather than trusted.
+            'country_region': stats['country_region'],
+            # How the settlements that P131 could not place were placed, if
+            # they were: by a division stating it contains them, and by their
+            # own coordinates falling inside one.
+            'placed_by_contains': by_contains.get(iso2, 0),
+            'placed_by_boundary': by_boundary.get(iso2, 0),
+            'placed_by_code_map': by_code_map.get(iso2, 0),
+            'said_to_be_a_duplicate': stats['said_to_be_a_duplicate'],
             'no_label': stats['no_label'], 'no_coord': stats['no_coord'],
             'empty_regions': stats['empty_regions'], 'native_lang': stats['native_lang'],
             'merged_duplicates': stats['merged_duplicates'],
@@ -684,10 +1077,11 @@ def main():
             'tier': plan.tier,
         })
         print('%-4s %-38s %5d regions %8d cities   (seen %d, orphan %d, no_label %d, '
-              'no_coord %d, merged %d, ambiguous %d)'
+              'no_coord %d, merged %d, ambiguous %d, in country region %d)'
               % (iso2, country['name'][:38], len(country['regions']), cities,
                  seen, stats['orphan'], stats['no_label'], stats['no_coord'],
-                 stats['merged_duplicates'], stats['ambiguous_names']), flush=True)
+                 stats['merged_duplicates'], stats['ambiguous_names'],
+                 stats['country_region']), flush=True)
 
     # The manifest a consumer reads first. Sorted by country name and
     # fingerprinted from the per-file hashes rather than the clock, so two runs
@@ -721,6 +1115,12 @@ def main():
         out.write(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
 
     summary.sort(key=lambda entry: entry['code'])
+    cities_total = sum(entry['cities'] for entry in summary)
+    in_country_region = sum(entry['country_region'] for entry in summary)
+    placed_by_contains = sum(entry['placed_by_contains'] for entry in summary)
+    placed_by_boundary = sum(entry['placed_by_boundary'] for entry in summary)
+    placed_by_code_map = sum(entry['placed_by_code_map'] for entry in summary)
+    duplicates_dropped = sum(entry['said_to_be_a_duplicate'] for entry in summary)
     with open(os.path.join(args.out_dir, 'build-stats.json'), 'w', encoding='utf-8') as out:
         out.write(json.dumps({
             'settlement_classes': len(settlement_classes),
@@ -730,7 +1130,12 @@ def main():
             'propagation_rounds': rounds,
             'countries_written': len(summary),
             's_version': fingerprint,
-            'cities_total': sum(entry['cities'] for entry in summary),
+            'cities_total': cities_total,
+            'in_country_region': in_country_region,
+            'placed_by_contains': placed_by_contains,
+            'placed_by_boundary': placed_by_boundary,
+            'placed_by_code_map': placed_by_code_map,
+            'said_to_be_a_duplicate': duplicates_dropped,
             'elapsed_seconds': round(time.monotonic() - started, 1),
             'countries': summary,
         }, indent=4, sort_keys=True))
@@ -741,8 +1146,16 @@ def main():
         shutil.rmtree(bucket_dir, ignore_errors=True)
 
     print('\n%d countries, %d cities written to %s in %.0fs'
-          % (len(summary), sum(entry['cities'] for entry in summary),
-             args.out_dir, time.monotonic() - started))
+          % (len(summary), cities_total, args.out_dir, time.monotonic() - started))
+    print('%d cities (%.1f%%) ship in the region named after their country, across %d '
+          'countries' % (in_country_region,
+                         100.0 * in_country_region / max(1, cities_total),
+                         sum(1 for e in summary if e['country_region'])))
+    if placed_by_contains or placed_by_boundary or placed_by_code_map:
+        print('%d would have been there but for a division stating it contains them, '
+              '%d more but for their coordinates, and %d more but for what those '
+              'coordinates turned out to mean'
+              % (placed_by_contains, placed_by_boundary, placed_by_code_map))
     print('manifest: %s  (s_version %s)' % (manifest_path, fingerprint))
 
 
