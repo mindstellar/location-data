@@ -727,6 +727,17 @@ def main():
         print('  %d more state no containment at all and were placed by their '
               'coordinates' % len(placed_by_boundary), flush=True)
 
+    # Everything the walks needed, and nothing after this point does. The
+    # second answer is the expensive one -- one entry per entity the P150 graph
+    # reaches, the same order as `assign` itself -- and holding it through the
+    # country-writing phase costs well over a gigabyte for nothing. This
+    # machine has 15 GB with a database on it, and a build that got as far as
+    # writing its 104th country was killed for want of the difference.
+    contains_assign.clear()
+    del p131[:]
+    del p150[:]
+    del p279[:]
+
     # Attachment fallback. A country can select a perfectly good division tier
     # and still attach almost nothing to it, when its settlements' P131 points
     # somewhere the selected divisions cannot be reached from. Singapore is the
