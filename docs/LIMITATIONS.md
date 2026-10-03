@@ -28,7 +28,7 @@ Each release carries the same records three ways, under
 
 | | |
 |---|---|
-| `data/<CC>.ndjson` | one JSON object per line — country, then each region followed by its settlements. Streamable in constant memory, which matters: the largest country is 76 MB. |
+| `data/<CC>.ndjson` | one JSON object per line: country, then each region followed by its settlements. Streamable in constant memory, which matters: the largest country is 76 MB. |
 | `json/<CC>.json` | the same record as one nested document |
 | `csv/<CC>.csv` | one row per settlement, flat |
 
@@ -69,36 +69,36 @@ below.
 
 ## What a region is
 
-**The first-level ISO 3166-2 subdivision** — a division with no other
+**The first-level ISO 3166-2 subdivision**: a division with no other
 ISO-coded division above it. India's states, Germany's Länder, Japan's
 prefectures, Spain's autonomous communities, Czechia's kraje, Bangladesh's
 divisions, France's régions.
 
 That matters because ISO 3166-2 is a flat list per country and for about a
 fifth of countries it describes two levels at once. Taking the finer one gave
-109 regions for Czechia and 74 for Bangladesh — their districts rather than
-their regions and divisions — and made "region" mean something different in
+109 regions for Czechia and 74 for Bangladesh (their districts rather than
+their regions and divisions), and made "region" mean something different in
 every country. The no-ISO-parent rule is the only definition that is
 consistent across all of them.
 
 Cross-checked against Natural Earth's admin-1, which is public domain: the two
 agree on India, Germany, Japan, Brazil, the United States and most others.
 Where they differ, Natural Earth is applying per-country judgement rather than
-a rule — it takes départements for France but autonomous communities for
+a rule: it takes départements for France but autonomous communities for
 Spain.
 
 Each country also has **one region named after the country itself**, which
 catches settlements whose containment reaches no division. It appears only if
 something lands in it, which is why counts here are typically ISO + 1. In the
 2026-08-15 release it holds 57,250 settlements across 249 countries, and for
-Lithuania 99% of them — [`UNPLACED-SETTLEMENTS.md`](UNPLACED-SETTLEMENTS.md)
+Lithuania 99% of them. [`UNPLACED-SETTLEMENTS.md`](UNPLACED-SETTLEMENTS.md)
 measures it per country.
 
 Three things about it have since changed in the pipeline, and land in the next
 release.
 
 Containment now also reads **P150**, the parent's statement that it contains a
-division, which places 27,476 of those settlements — Lithuania alone accounts
+division, which places 27,476 of those settlements. Lithuania alone accounts
 for 24,117 of them.
 
 What still reaches no division is placed by its **coordinate**, against Natural
@@ -107,8 +107,8 @@ Wikidata does not decide, and it is fenced in accordingly: it answers with an
 ISO 3166-2 code, the code must name a division already shipped for that
 country, it cannot cross a border, and it runs only after both directions of
 containment have failed. Where the code names a division at another level or
-from an older ISO edition — Natural Earth gives France its départements and
-this dataset ships régions — what it means here is learned from the settlements
+from an older ISO edition (Natural Earth gives France its départements and
+this dataset ships régions), what it means here is learned from the settlements
 already placed inside it, and only where they are at least 90% agreed. Over the
 whole of the last release that places 45,666 settlements, on top of what P150
 reaches. It is optional: a build without
@@ -134,7 +134,7 @@ distinguishes them from ones that are. Each is in the pipeline with its reason:
   The county administrations were abolished in 2010 and Wikidata does not
   record the municipalities as being inside them, so the rule cannot separate
   the levels.
-- **Six ISO codes claimed by two items each** — Sevastopol and "administrative
+- **Six ISO codes claimed by two items each**: Sevastopol and "administrative
   and municipal division of Ukraine" both hold `UA-40`, Thessaly appears twice.
   One code now yields one division, lowest QID winning so a rebuild cannot
   flip which.
@@ -189,7 +189,7 @@ where the sector alone says as much and `Evergem (south Evergem)` becomes
 `Evergem (south)`. 308 names take the short form.
 
 **Upstream's own disambiguation is redone rather than kept.** Wikidata
-brackets some of its labels — `Dushi (Baghlan Province)`, `Floq (Klos)` — by a
+brackets some of its labels, such as `Dushi (Baghlan Province)` and `Floq (Klos)`, by a
 different rule and in a different format from this one, and two systems
 produced the collision each was meant to prevent: this built `Floq (Klos)`
 while upstream shipped `Floq, Klos`, and the two slugged alike. The bracket
@@ -209,7 +209,7 @@ labelled by what kind of unit it is with the name inside guillemets --
 `Gorodskoe poselenie <<Gorod Zavitinsk>>` is Zavitinsk -- which is another
 1,830. Where nothing derived from the data can
 tell two rows apart, the original bracket is put back rather than the row
-dropped — 768 of them.
+dropped. That applies to 768 of them.
 
 Exactly one row in each group keeps the plain name, since one of them is what
 the name usually means -- the largest, unless another cannot be qualified at
@@ -221,7 +221,7 @@ India and Mexico account for half the dropped rows.
 
 ## The three real gaps
 
-### Settlements with no coordinates are dropped — 883,194 of them
+### Settlements with no coordinates are dropped: 883,194 of them
 
 A row without a position cannot be mapped, distance-sorted or deduplicated, so
 it is not shipped. About two thirds of these are China's administrative
@@ -229,10 +229,10 @@ villages: Wikidata has the village, its name and its containment, but not where
 it is. India, Russia, Uganda and Myanmar account for most of the rest.
 
 This is the largest single gap in the dataset and it is upstream. Closing it
-needs a gazetteer with coordinates — NGA GNS is public domain and would fit —
+needs a gazetteer with coordinates (NGA GNS is public domain and would fit),
 and the expensive part is conflation, not licensing.
 
-### Names in Arabic script are refused — 163,759 settlements have no usable name
+### Names in Arabic script are refused: 163,759 settlements have no usable name
 
 A name has to survive slugification to have an identity, so a settlement whose
 only labels are in a non-Latin script is transliterated. That is done only for
@@ -242,11 +242,11 @@ scripts where the output was checked against real data and found to be a name:
 Everything else is refused rather than guessed, because a wrong name still
 slugs, still ships, and nobody notices:
 
-- **Abjads** — Arabic, Hebrew — omit short vowels, so a table lookup returns a
+- **Abjads** (Arabic, Hebrew) omit short vowels, so a table lookup returns a
   consonant skeleton. Casablanca comes out `ldr lbyd'`.
-- **Abugidas** — Burmese, Bengali, Devanagari — drop inherent vowels unevenly.
+- **Abugidas** (Burmese, Bengali, Devanagari) drop inherent vowels unevenly.
   Burmese gives `Kyiunlpmriu` for a town called Kyainglat.
-- **Japanese and Korean** — the tables reach for Mandarin readings of kanji and
+- **Japanese and Korean**: the tables reach for Mandarin readings of kanji and
   hanja and return `MangSangHaeSuYogJang` for a Korean beach.
 
 Yemen and Morocco are the worst affected. This needs a source with real BGN
@@ -268,7 +268,7 @@ against `Cabildo (ciudad)`.
 ### Timezone is 46.4%
 
 From the IANA time zone database, which is public domain, and which resolves
-only countries that have exactly one zone — 214 of 247. Multi-zone countries
+only countries that have exactly one zone: 214 of 247. Multi-zone countries
 (United States, Russia, Canada, Australia, Brazil) need boundary geometry, and
 the usable boundary sets are OpenStreetMap-derived and therefore share-alike.
 Taking one would forfeit the CC0 guarantee, which is the whole point of the
@@ -289,10 +289,10 @@ are Crimea, Kosovo and the Essequibo. Where Wikidata is politically ambiguous,
 the more standard answer was taken.
 
 **Six codes are not ISO 3166-1.** `AC`, `CP`, `CQ`, `DG` and `TA` are ISO
-*exceptionally reserved* codes for real inhabited places — Ascension, Clipperton,
+*exceptionally reserved* codes for real inhabited places: Ascension, Clipperton,
 Sark, Diego Garcia, Tristan da Cunha. `XK` is the user-assigned code for Kosovo
-that the EU and most software use. Dissolved states carrying legacy ISO codes —
-East Germany, Yugoslavia, the Netherlands Antilles — are excluded.
+that the EU and most software use. Dissolved states carrying legacy ISO codes
+(East Germany, Yugoslavia, the Netherlands Antilles) are excluded.
 
 **Territories are countries, not regions of their parent.** Guadeloupe, Puerto
 Rico, Hong Kong, Aruba and Åland ship as their own countries and do *not* also
@@ -303,11 +303,11 @@ or Finland. Listing them in both places would put one place under two ids.
 is filed under a region named for the country itself rather than dropped. This
 is why some countries have a region with the same name as the country. Its `id`
 is the country's own, its `iso_3166_2` is null, and its `place_type` is a
-country class — any of the three identifies it.
+country class. Any of the three identifies it.
 
 It no longer has to be identified that way, and more usefully, the two things
 it means are now told apart. `sole` marks a country that has no subdivision at
-all — Gibraltar, the Vatican, Sint Maarten, seventeen in total, where this
+all (Gibraltar, the Vatican, Sint Maarten, seventeen in total), where this
 region is the only level and belongs in a picker like any other. `unassigned`
 marks the bucket, where a country has real divisions and these are the
 settlements none of them could hold. Exactly one of the two is true.
@@ -315,23 +315,23 @@ settlements none of them could hold. Exactly one of the two is true.
 Every settlement also carries **`admin1_source`**: `stated` where a containment
 statement upstream put it in its region, `boundary` where a coordinate falling
 inside a public-domain polygon did, `none` for the bucket. Over the last build
-that is 1,641,867 stated, 22,045 boundary and 4,714 none — 98.4%, 1.3%, 0.3%.
+that is 1,641,867 stated, 22,045 boundary and 4,714 none: 98.4%, 1.3%, 0.3%.
 The middle figure is this pipeline's inference rather than anyone's assertion,
 and a consumer that must be able to say "we know this address's region" should
 require the first.
 
 **One row per place.** A settlement that reaches no division and that upstream
-marks with P460 — *said to be the same as* — as being the same place as one
+marks with P460 (*said to be the same as*) as being the same place as one
 that does is dropped, and the row with the division is kept. That removed 111
 rows from a build over the 11 August dump: a second "Warszawa" beside Warsaw, a
 second "Łódź", "Cochin" beside Kochi, an item labelled "do not use" two hundred
-metres from Stuttgart, and the ancient names of living cities — Ledra beside
+metres from Stuttgart, and the ancient names of living cities: Ledra beside
 Nicosia, Naissus beside Niš, Arbela beside Erbil. None of the 111 carries a
 population and almost none carries any containment at all.
 
 Distance is not consulted. P460 links confusable places as readily as identical
-ones — Hoya in Lower Saxony to La Hoya in Salamanca, 1,778 km apart, or Loving
-County to Mentone, the county and its seat — and in every such pair both sides
+ones (Hoya in Lower Saxony to La Hoya in Salamanca, 1,778 km apart, or Loving
+County to Mentone, the county and its seat), and in every such pair both sides
 have a division, so asking which side is placed refuses them without measuring
 anything. Where both are placed, or neither is, nothing is dropped. It runs
 before the boundary lookup, because 92 of those rows fall inside a polygon and
@@ -340,20 +340,20 @@ where nothing merges them.
 
 **Archaeology is excluded.** Ghost towns, abandoned villages, hillforts,
 Neolithic settlements and ancient cities are not current places and are left
-out — about 55,000 rows, 20,914 of them German *Bodendenkmäler*: buried
+out: about 55,000 rows, 20,914 of them German *Bodendenkmäler*: buried
 monuments from the state heritage registers, named by their register id
 (`Cultural heritage D-1-6933-0003 in Titting`). Those needed a categorical
 exclusion rather than the former-entity one, because Wikidata tags them as
-human settlements too — the site of a settlement two thousand years gone — and
+human settlements too (the site of a settlement two thousand years gone), and
 they carry no end date, the monument designation being current.
 
-Four more classes are excluded the same way and for the same reason — each is
+Four more classes are excluded the same way and for the same reason. Each is
 tagged as a human settlement upstream, so nothing softer keeps it out:
 **concentration camp** (the Alderney camps shipped as Guernsey settlements),
 **prisoner-of-war camp** (Stalags and Oflags), **internment camp**, **labor
 camp**, **corrective labor colony**, **clandestine centre of detention**,
 **urban ensemble**, **urban layout** and
-**group of houses** — a housing estate, which is part of a town and not one:
+**group of houses**: a housing estate, which is part of a town and not one:
 Polish *osiedla*, Berlin and Vienna *Wohnanlagen*, RNZAF married quarters.
 A *Wohnanlage* is named by the streets it covers, so its label is a street
 list, which is where most of the remaining absurd names came from.
@@ -373,13 +373,13 @@ Athens, Damascus, Istanbul) is kept, because the rule requires every one of its
 classes to be historical.
 
 **Suburbs are cities; neighbourhoods are not.** Where Wikidata uses "suburb" it
-is overwhelmingly an addressing unit — gazetted localities of Victoria and
-Tasmania — and an Australian address names its suburb. Neighbourhoods are
+is overwhelmingly an addressing unit (gazetted localities of Victoria and
+Tasmania), and an Australian address names its suburb. Neighbourhoods are
 informal, overlapping and have no postal identity.
 
 **Every row names its source.** `source` is `wikidata` on every row today. It
 exists because ids from a second source would otherwise share an integer space
-with Wikidata QIDs and nothing would tell them apart — which is exactly the
+with Wikidata QIDs and nothing would tell them apart, which is exactly the
 defect an earlier release caused in a consumer that matched on the id alone.
 
 ## Smaller things
@@ -390,14 +390,14 @@ defect an earlier release caused in a consumer that matched on the id alone.
   recover on its own as Wikidata reclassifies.
 - **A label over 100 characters is refused as a description**, which is the
   same judgement the parenthesis rule makes for the bot glosses that carry one.
-  Names are short — the median is 11 characters and the 99th percentile 49 — so
+  Names are short (the median is 11 characters and the 99th percentile 49), so
   this cannot reach a real one. It removed street lists (`Wohnsiedlung
   Gontardweg 52; 53; 54; …`, 249 characters), Portuguese heritage ensembles,
   Polish urban-layout register entries, and one Honduran label consisting of a
   village name followed by a message to the author's friends. Names over 100
   characters went from 108 to 1.
 - **An address is cut back to its name.** Wikidata's English labels for
-  Russian villages are routinely the whole containment chain — `Pavlovskaya,
+  Russian villages are routinely the whole containment chain: `Pavlovskaya,
   Vozhegodsky Selsoviet, Vozhegodsky District, Vologda Oblast`. The name is the
   head; the rest is where it is, which `admin1_id` and `admin2_id` already
   record. 2,715 rows, cut only where there are at least two commas and an

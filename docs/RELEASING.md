@@ -16,8 +16,8 @@ files and almost all of it changes every month, because a refresh renames and
 reparents real administrative divisions. Committing that is a repository that
 grows by two gigabytes a month and can never be made smaller again.
 
-And a refresh should be read before it ships. The diff is not noise — it is
-countries gaining and losing subdivisions — and the person who understands
+And a refresh should be read before it ships. The diff is not noise. It is
+countries gaining and losing subdivisions, and the person who understands
 whether that is upstream reality or a bug in here is the person running it.
 
 ## What you need once
@@ -44,7 +44,7 @@ export R2_SECRET_ACCESS_KEY=...
 ```
 
 Worth making **two** tokens. Object Read & Write for publishing, and a separate
-Object Read Only for anything that only consumes releases — an import, a
+Object Read Only for anything that only consumes releases: an import, a
 Worker, a restore. The read-only one ends up in more places and cannot
 overwrite a release if it leaks.
 
@@ -75,7 +75,7 @@ again:
 everything except write to R2. `--rescan` forces stage 1 to redo itself.
 
 Publishing is gated on `validate.py`, which compares the new build against the
-currently published release — not against a git ref, and not against nothing.
+currently published release, not against a git ref, and not against nothing.
 Without credentials it fails rather than skipping, so the gate cannot quietly
 disappear. On the very first publish there is nothing to compare against and it
 says so.
@@ -125,9 +125,9 @@ Two cache rules on the zone, and **their order is load-bearing**. Every
 matching rule in a cache ruleset applies in sequence and the last one wins, so
 the broad rule comes first and the specific override second:
 
-1. `/releases/*` — 30 days at the edge, 1 day in the browser. Versioned files
+1. `/releases/*`: 30 days at the edge, 1 day in the browser. Versioned files
    never change.
-2. `/releases/latest.json` — 60 seconds. This is how a new release is noticed;
+2. `/releases/latest.json`: 60 seconds. This is how a new release is noticed;
    with the rules the other way round it inherited the 30-day TTL and a
    release would have been invisible for a month.
 
@@ -176,7 +176,7 @@ After changing a cache rule, purge by hand -- publish only purges what it
 wrote, and a rule change affects everything already cached.
 
 **The zone's security settings blocked a legitimate client.** Browser Integrity
-Check returned 403 to `Python-urllib/3.11` — not the WAF, not Bot Fight Mode,
+Check returned 403 to `Python-urllib/3.11`. It was not the WAF, not Bot Fight Mode,
 which were both off or irrelevant. `python-requests`, `curl`, `wget`, Go and
 Java all passed, so it was invisible until something fetched with the Python
 standard library. A custom firewall rule now skips `bic`, `uaBlock`,
@@ -189,7 +189,7 @@ The edge also compresses on the fly, which is what makes storing the files
 uncompressed the right call rather than a compromise. Measured on the worst
 case, `json/MX-Mexico.json`: **76.5 MB uncompressed, 5.7 MB over the wire with
 Brotli, 13.5x**. The client decompresses transparently, so the sha256 in the
-manifest still verifies against what it receives — the thing pre-compressed
+manifest still verifies against what it receives, which is the thing pre-compressed
 objects would have broken.
 
 Uncompressed, deliberately. The manifest carries a sha256 of each file's exact
@@ -201,7 +201,7 @@ That cost is not nothing, and it is worth knowing before it surprises anyone:
 the largest single file is `json/MX-Mexico.json` at **76.5 MB**, followed by
 Russia at 58.4 MB. An install fetching Mexico downloads all of it. Gzip would
 take that to roughly a tenth, and the reason it is not done is that
-pre-compressed objects served with `Content-Encoding: gzip` are a footgun —
+pre-compressed objects served with `Content-Encoding: gzip` are a footgun:
 `curl` without `--compressed` saves the compressed bytes under a `.json` name,
 and the sha256 in the manifest then matches nothing the user can see. If
 bandwidth ever matters more than that, the clean fix is a custom domain letting
@@ -254,7 +254,7 @@ Wikidata is refused whatever the path would have been called.
 ## Access
 
 The bucket is **private**. Turning on public access is a separate, deliberate
-act — either the `r2.dev` managed domain or a custom domain — and it is the
+act (either the `r2.dev` managed domain or a custom domain), and it is the
 moment the data becomes downloadable by anyone, so it is not something a
 publish script should do as a side effect.
 
