@@ -2,7 +2,7 @@
 
 <p align="center">
   A worldwide dataset of countries, administrative divisions and settlements,<br>
-  built from Wikidata and published <strong>CC0</strong> — plus the pipeline that builds it.
+  built from Wikidata and published <strong>CC0</strong>, plus the pipeline that builds it.
 </p>
 
 <p align="center">
@@ -38,7 +38,7 @@ curl -s --compressed https://geo.mindstellar.com/releases/<version>/json/MT.json
 ```
 
 `releases/latest.json` is the only URL worth hardcoding. It names the current
-version and its manifest; everything else hangs off that. Use `--compressed` —
+version and its manifest; everything else hangs off that. Use `--compressed`:
 the edge compresses on the fly, and Mexico is 76 MB if you don't.
 
 ## If you would rather not host it
@@ -47,8 +47,8 @@ Self-hosting is the point and always will be: the files above are the whole
 dataset, and nothing here depends on a service staying up.
 
 But if you only want a country list in a dropdown,
-**[placedb.org](https://placedb.org)** serves these releases as static JSON —
-countries, divisions, settlements and prefix buckets for autocomplete — with no
+**[placedb.org](https://placedb.org)** serves these releases as static JSON
+(countries, divisions, settlements and prefix buckets for autocomplete) with no
 key, no account and no rate limit.
 
 ```bash
@@ -85,7 +85,7 @@ to qualify the licence below.
 `id` is the Wikidata QID, and it is the identity to match on when you
 re-import: an upstream rename becomes a rename rather than a delete plus an
 insert. Coordinates are 6-decimal strings, sized for `DECIMAL(10,6)`. Countries
-carry a fuller block — capital, currency and symbol, calling code, continent,
+carry a fuller block: capital, currency and symbol, calling code, continent,
 demonym, ccTLD, flag emoji, ISO alpha-3 and numeric.
 
 Field-by-field fill rates are in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
@@ -94,7 +94,7 @@ Field-by-field fill rates are in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
 
 | | |
 |---|---|
-| `data/<CC>.ndjson` | one JSON object per line — country, then each region followed by its settlements. Streamable in constant memory, which matters: the largest country is 76 MB. |
+| `data/<CC>.ndjson` | one JSON object per line: country, then each region followed by its settlements. Streamable in constant memory, which matters: the largest country is 76 MB. |
 | `json/<CC>.json` | the same record as one nested document |
 | `csv/<CC>.csv` | one row per settlement, flat |
 
@@ -102,7 +102,7 @@ Every file's sha256 and byte count is in `manifest.json`, so a fetch can be
 verified. Files are named by ISO code, so a country renamed upstream cannot
 move one.
 
-The data is published to object storage rather than kept in git — see
+The data is published to object storage rather than kept in git. See
 [`docs/RELEASING.md`](docs/RELEASING.md). What is in this repository is the
 pipeline that produces it.
 
@@ -122,7 +122,7 @@ For anything that ships location data inside a product, that is a permanent
 obligation attached to a table of city names.
 
 So it was rejected as a source rather than used as one. **Nothing here is
-derived from it** — not the data, which comes from the Wikidata dump, and not
+derived from it**: not the data, which comes from the Wikidata dump, and not
 the code. Its existence is the motivation, not the provenance.
 
 Every decision below defers to the same constraint: no source carrying an
@@ -133,8 +133,8 @@ which would close real gaps documented in
 
 Where Wikidata alone cannot fill a gap, the fallbacks are chosen the same way.
 Time zones come from the IANA time zone database, which is public domain.
-Administrative boundaries — used only to place a settlement that states no
-containment at all — come from Natural Earth, which is public domain. Flag
+Administrative boundaries (used only to place a settlement that states no
+containment at all) come from Natural Earth, which is public domain. Flag
 emoji and ccTLDs are computed from the ISO 3166-1 code rather than read from
 anywhere. Nothing here adds an obligation.
 
@@ -153,8 +153,8 @@ the line where you would expect.
   abolished municipalities.
 - **Neighbourhoods are excluded, suburbs are not.** The two words describe
   different things. Where Wikidata uses "suburb" it is overwhelmingly an
-  addressing unit — "gazetted locality of Victoria", "suburb/locality of
-  Tasmania" — and an Australian address names its suburb, so a picker without
+  addressing unit ("gazetted locality of Victoria", "suburb/locality of
+  Tasmania"), and an Australian address names its suburb, so a picker without
   them cannot express most Australian locations. Neighbourhoods are informal,
   overlapping and have no postal identity.
 - **Class exclusions lose to positive evidence.** "College town" is a subclass
@@ -177,7 +177,7 @@ the line where you would expect.
   know this address's region" filters on the first. Currently 98.4%, 1.3%,
   0.3%.
 - **A region named after its country says which kind it is.** `sole` where the
-  country has no subdivision at all — Gibraltar, the Vatican, Sint Maarten —
+  country has no subdivision at all (Gibraltar, the Vatican, Sint Maarten),
   and `unassigned` where it is the bucket for settlements nothing could place.
   A picker can show the first and hide the second.
 - **One row per place.** Where upstream states that two items are the same
@@ -187,7 +187,7 @@ the line where you would expect.
 - **No region contains the same name twice.** A name identifying two places
   identifies neither, and a consumer picking from a list cannot see that the
   choice was ambiguous. Duplicates are merged where they are the same place,
-  qualified where they are not — `Aach (Konstanz)` — and dropped where nothing
+  qualified where they are not, as in `Aach (Konstanz)`, and dropped where nothing
   can tell them apart.
 - **The build is byte-deterministic.** Sorted collections, fixed coordinate
   precision, stable key order, and a version derived from content hashes rather
@@ -222,7 +222,7 @@ about 1.8 GB of entity records plus the three graphs it cannot do without.
 The split is forced, not stylistic. Nothing in a streaming pass can decide
 whether an entity is a settlement: that needs the transitive `P279` subclass
 closure, and attaching a settlement to its region needs the transitive `P131`
-containment graph — and `P150`, which is the same containment stated by the
+containment graph, and `P150`, which is the same containment stated by the
 parent instead of the child. All are scattered across the whole dump, so
 classification cannot happen until the pass is over.
 
@@ -250,7 +250,7 @@ non-Latin scripts are machine transliterated, which is a mechanical
 transformation of CC0 input and creates no new rights.
 
 One field has a second source. A settlement that states no containment at all
-— it has a country, a class and a coordinate, and nothing else — is placed by
+(it has a country, a class and a coordinate, and nothing else) is placed by
 testing its coordinate against **Natural Earth's** admin-1 boundaries, which
 are public domain and carry no attribution or share-alike requirement. It
 decides `admin1_id` for those rows and nothing else: it answers with an ISO
@@ -265,7 +265,7 @@ written down. No other source contributes a single field.
 [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) is the honest account: coverage
 per field, the three real gaps (settlements with no coordinates, Arabic-script
 names, timezones outside single-zone countries), and the choices that are
-decisions rather than defects — disputed territories, country-level regions,
+decisions rather than defects: disputed territories, country-level regions,
 territories shipping as countries rather than as regions of their parent.
 
 [`docs/UNPLACED-SETTLEMENTS.md`](docs/UNPLACED-SETTLEMENTS.md) measures the
