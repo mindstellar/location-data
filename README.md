@@ -59,6 +59,24 @@ It is built from these releases and adds nothing to them; every response names
 the release it came from. It is a separate project, so that this one never has
 to qualify the licence below.
 
+## Releases
+
+Each release is compared with the one before it, place by place, by Wikidata
+id. A net count hides changes that cancel out; these do not. The full
+comparison, per country, is `releases/<version>/changes.json`.
+
+<!-- releases:start -->
+| Release | Countries | Divisions | Settlements | Added | Removed | Renamed | Moved > 1 km |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| [`2026-09-20T1335Z`](https://geo.mindstellar.com/releases/2026-09-20T1335Z/manifest.json) | 255 (0) | 4,314 (−2) | 1,671,395 (+2,769) | 3,500 | 731 | 17,373 | 1,197 |
+| [`2026-08-22T0451Z`](https://geo.mindstellar.com/releases/2026-08-22T0451Z/manifest.json) | 255 (0) | 4,316 (−12) | 1,668,626 (−6,321) | 497 | 6,818 | 5,147 | 0 |
+| [`2026-08-15T0426Z`](https://geo.mindstellar.com/releases/2026-08-15T0426Z/manifest.json) | 255 | 4,328 | 1,674,947 | first |  |  |  |
+<!-- releases:end -->
+
+"Moved" is a coordinate that changed by more than 1 km. Counts are as
+`latest.json` gives them, so divisions include each country's bucket for
+settlements no division could be found for.
+
 ## What a row looks like
 
 ```json

@@ -59,6 +59,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 import cdn  # noqa: E402
+import changes  # noqa: E402
 import r2  # noqa: E402
 
 CC0 = """This data is dedicated to the public domain under CC0 1.0 Universal.
@@ -242,6 +243,28 @@ def tag_release(version, pointer):
     print('  release %s' % done.stdout.strip())
 
 
+def publish_changes(previous, build_dir, version, prefix):
+    """What moved since the release before this one, beside the manifest.
+
+    Before the pointer moves, so a consumer that follows latest.json never
+    finds a release without its changes. Best effort all the same: the data is
+    already uploaded, and a missing comparison is not a reason to withhold it.
+    """
+    if not previous:
+        print('no earlier release, so no changes.json')
+        return
+    try:
+        old_dir = changes.fetch(previous['version'])
+        body = changes.dumps(changes.compare(old_dir, build_dir,
+                                             previous['version'], version))
+        r2.put_bytes(body.encode('utf-8'), '%s/changes.json' % prefix)
+        print('changes.json: compared with %s' % previous['version'])
+    except Exception as error:  # noqa: BLE001
+        print('changes.json NOT published: %s' % error)
+        print('  python tools/changes.py fetch %s, then compare, then upload by hand'
+              % previous['version'])
+
+
 def publish_release(args):
     build_dir = args.path
     manifest_path = os.path.join(build_dir, MANIFEST)
@@ -279,6 +302,7 @@ def publish_release(args):
 
     r2.put_bytes(CC0.encode('utf-8'), '%s/LICENSE' % prefix, content='text/plain')
     r2.put_many([(p, '%s/%s' % (prefix, k)) for p, k in files])
+    publish_changes(existing, build_dir, version, prefix)
 
     with open(manifest_path, encoding='utf-8') as handle:
         manifest = json.load(handle)
@@ -304,6 +328,12 @@ def publish_release(args):
 
     if not args.no_tag:
         tag_release(version, pointer)
+
+    try:
+        changes.write_readme(changes.history(3))
+        print('README.md release table updated -- commit it')
+    except Exception as error:  # noqa: BLE001
+        print('README.md release table not updated: %s' % error)
 
     # Best effort, not a precondition. A bucket does not have to have a CDN in
     # front of it, and the release itself is already in R2 by this point --
