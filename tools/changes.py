@@ -1,6 +1,7 @@
 """What moved between two releases, counted place by place.
 
-    python tools/changes.py compare <old-dir> <new-dir> [-o changes.json] [--upload]
+    python tools/changes.py compare <old-dir> <new-dir> [-o changes.json]
+                            [--rows changes.ndjson] [--upload]
     python tools/changes.py fetch <version> [--into .release-cache]
     python tools/changes.py readme [--releases 3]
 
@@ -12,17 +13,24 @@ cannot say that 1,530 arrived and 290 left, or that 37 were renamed, because a
 net figure hides every change that cancels out. So this matches records by
 their Wikidata id, the one key that survives a rename or a move.
 
+Two files come out. changes.json is the summary, with the NOTABLE changes most
+worth a human look listed first. changes.ndjson is every changed place, one per
+line with its Wikidata id and the values before and after, ordered the same
+way, so a reviewer checks the changed rows instead of re-auditing all of them.
+
 The output is derived only from the two releases it names, so like the releases
 themselves it is byte deterministic: no timestamps, sorted keys.
 """
 
 import argparse
+import difflib
 import hashlib
 import json
 import math
 import os
 import re
 import sys
+import unicodedata
 import urllib.error
 import urllib.request
 
@@ -38,6 +46,9 @@ README = os.path.join(ROOT, 'README.md')
 # A coordinate correction under this is Wikidata tidying a decimal, not a place
 # that was in the wrong spot.
 MOVED_KM = 1.0
+
+# How many of the strangest changes changes.json lists by name.
+NOTABLE = 50
 
 START = '<!-- releases:start -->'
 END = '<!-- releases:end -->'
@@ -88,6 +99,91 @@ def _km(a, b):
     h = (math.sin((lat2 - lat1) * r / 2) ** 2
          + math.cos(lat1 * r) * math.cos(lat2 * r) * math.sin((lon2 - lon1) * r / 2) ** 2)
     return 12742 * math.asin(math.sqrt(min(1.0, h)))
+
+
+def _fold(name):
+    """A name without accents, case, punctuation or a bracketed qualifier.
+
+    "Sao Paulo" and "São Paulo" match, and so do "Durlabhpur" and "Durlabhpur
+    (Gangajalghati community development block)": the build adds and drops that
+    qualifier as other places of the same name come and go, which is not a
+    rename anyone needs to check.
+    """
+    name = re.sub(r'\s*\([^)]*\)', '', name)
+    plain = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode()
+    return re.sub(r'[^a-z0-9]', '', plain.casefold())
+
+
+def _place(value, regions):
+    name, country, region, lat, lon, population = value
+    out = {'name': name, 'country': country, 'region': region,
+           'region_name': regions.get(region, (None,))[0], 'lat': lat, 'lon': lon}
+    if population is not None:
+        out['population'] = population
+    return out
+
+
+def _judge(before, after, survivor=None):
+    """What changed about one place, and how strange it looks.
+
+    The score is roughly orders of magnitude of surprise, so its parts add up:
+    a place that moved 400 km (2.6) outranks one renamed outright (about 1.8),
+    which outranks a population that merely doubled (0.3). Changes that only
+    tidy a value score nothing but are still listed in the rows file.
+    """
+    kinds = []
+    why = []
+    score = 0.0
+
+    if before is None:
+        kinds.append('added')
+        if after[5]:
+            score += math.log10(max(after[5], 1)) / 3
+            why.append('new, population {:,}'.format(after[5]))
+        return kinds, why, score
+    if after is None:
+        kinds.append('removed')
+        if before[5]:
+            score += math.log10(max(before[5], 1)) / 2
+            why.append('removed, population {:,}'.format(before[5]))
+        # Usually a duplicate cleaned up rather than a place lost, so it ranks
+        # below a removal that left nothing of that name behind.
+        if survivor is not None:
+            score /= 2
+            why.append('a place of the same name remains: Q%d' % survivor)
+        return kinds, why, score
+
+    if before[0] != after[0]:
+        kinds.append('renamed')
+        if _fold(before[0]) != _fold(after[0]):
+            likeness = difflib.SequenceMatcher(None, _fold(before[0]), _fold(after[0])).ratio()
+            score += 1 + (1 - likeness)
+            why.append('renamed from %s' % before[0])
+
+    distance = _km(before[3:5], after[3:5])
+    if distance > MOVED_KM:
+        kinds.append('moved')
+        score += math.log10(distance)
+        why.append('moved {:,.0f} km'.format(distance))
+
+    if before[1] != after[1]:
+        kinds.append('country_changed')
+        score += 3
+        why.append('country %s to %s' % (before[1], after[1]))
+    elif before[2] != after[2]:
+        kinds.append('reassigned')
+        score += 1
+        why.append('moved to another division')
+
+    if before[5] != after[5]:
+        kinds.append('population')
+        if before[5] and after[5]:
+            ratio = max(before[5], after[5]) / max(min(before[5], after[5]), 1)
+            if ratio >= 2:
+                weight = 1 if max(before[5], after[5]) >= 1000 else 0.5
+                score += math.log10(ratio) * weight
+                why.append('population {:,} to {:,}'.format(before[5], after[5]))
+    return kinds, why, score
 
 
 def read(release_dir):
@@ -160,6 +256,33 @@ def compare(old_dir, new_dir, old_version=None, new_version=None):
         row = per_country.setdefault(code, {'added': 0, 'removed': 0, 'renamed': 0, 'moved': 0})
         row[field] += 1
 
+    remaining = {}
+    for key in sorted(new_places):
+        value = new_places[key]
+        remaining.setdefault((value[1], _fold(value[0])), key)
+
+    rows = []
+    for key in sorted(set(old_places) | set(new_places)):
+        before = old_places.get(key)
+        after = new_places.get(key)
+        if before == after:
+            continue
+        survivor = remaining.get((before[1], _fold(before[0]))) if after is None else None
+        kinds, why, score = _judge(before, after, survivor)
+        if not kinds:
+            continue
+        row = {'id': key, 'qid': 'Q%d' % key, 'type': 'settlement',
+               'country': (after or before)[1], 'change': kinds,
+               'score': round(score, 3)}
+        if why:
+            row['why'] = why
+        if before is not None:
+            row['before'] = _place(before, old_regions)
+        if after is not None:
+            row['after'] = _place(after, new_regions)
+        rows.append(row)
+    rows.sort(key=lambda row: (-row['score'], row['id']))
+
     totals = {'added': 0, 'removed': 0, 'renamed': 0, 'moved': 0,
               'reassigned': 0, 'population_changed': 0}
     for key, before in old_places.items():
@@ -229,12 +352,29 @@ def compare(old_dir, new_dir, old_version=None, new_version=None):
         'countries_removed': sorted(set(old_countries) - set(new_countries)),
         'countries': countries,
         'moved_km': MOVED_KM,
-    }
+        'notable': [row for row in rows[:NOTABLE] if row['score'] > 0],
+        'rows': len(rows),
+    }, rows
+
+
+def dumps_rows(rows):
+    return ''.join(json.dumps(row, sort_keys=True, separators=(',', ':'),
+                              ensure_ascii=False) + '\n' for row in rows)
 
 
 def dumps(changes):
     return json.dumps(changes, sort_keys=True, separators=(',', ':'),
                       ensure_ascii=False) + '\n'
+
+
+def upload(version, body, rows):
+    """Both files, rows first: changes.json is what a reader looks for."""
+    import r2
+    prefix = 'releases/%s' % version
+    r2.put_bytes(rows.encode('utf-8'), '%s/changes.ndjson' % prefix,
+                 content='application/x-ndjson')
+    r2.put_bytes(body.encode('utf-8'), '%s/changes.json' % prefix)
+    print('uploaded %s/changes.json and changes.ndjson' % prefix, file=sys.stderr)
 
 
 def history(count):
@@ -306,6 +446,7 @@ def main():
     one.add_argument('old')
     one.add_argument('new')
     one.add_argument('-o', '--out', help='write here instead of stdout')
+    one.add_argument('--rows', help='write every changed place here, as ndjson')
     one.add_argument('--old-version', help='release name, if the directory is not named for it')
     one.add_argument('--new-version', help='release name, if the directory is not named for it')
     one.add_argument('--upload', action='store_true',
@@ -320,15 +461,15 @@ def main():
 
     args = parser.parse_args()
     if args.command == 'compare':
-        changes = compare(args.old, args.new, args.old_version, args.new_version)
+        changes, rows = compare(args.old, args.new, args.old_version, args.new_version)
         if not (changes['from']['version'] and changes['to']['version']):
             sys.exit('name both releases with --old-version and --new-version')
         body = dumps(changes)
+        if args.rows:
+            with open(args.rows, 'w', encoding='utf-8') as handle:
+                handle.write(dumps_rows(rows))
         if args.upload:
-            import r2
-            key = 'releases/%s/changes.json' % changes['to']['version']
-            r2.put_bytes(body.encode('utf-8'), key)
-            print('uploaded %s' % key, file=sys.stderr)
+            upload(changes['to']['version'], body, dumps_rows(rows))
         if args.out:
             with open(args.out, 'w', encoding='utf-8') as handle:
                 handle.write(body)

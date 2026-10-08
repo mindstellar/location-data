@@ -62,8 +62,15 @@ to qualify the licence below.
 ## Releases
 
 Each release is compared with the one before it, place by place, by Wikidata
-id. A net count hides changes that cancel out; these do not. The full
-comparison, per country, is `releases/<version>/changes.json`.
+id. A net count hides changes that cancel out; these do not.
+
+- `releases/<version>/changes.json` is the summary and per-country counts,
+  with the 50 changes that look strangest listed first: a place that moved
+  hundreds of kilometres, changed country, lost a city's population, or was
+  renamed outright.
+- `releases/<version>/changes.ndjson` is every changed place, one per line, with
+  its Wikidata id and the values before and after, strangest first. Reviewing a
+  release means reading this file, not re-auditing every row.
 
 <!-- releases:start -->
 | Release | Countries | Divisions | Settlements | Added | Removed | Renamed | Moved > 1 km |

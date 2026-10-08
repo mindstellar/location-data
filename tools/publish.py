@@ -255,9 +255,8 @@ def publish_changes(previous, build_dir, version, prefix):
         return
     try:
         old_dir = changes.fetch(previous['version'])
-        body = changes.dumps(changes.compare(old_dir, build_dir,
-                                             previous['version'], version))
-        r2.put_bytes(body.encode('utf-8'), '%s/changes.json' % prefix)
+        summary, rows = changes.compare(old_dir, build_dir, previous['version'], version)
+        changes.upload(version, changes.dumps(summary), changes.dumps_rows(rows))
         print('changes.json: compared with %s' % previous['version'])
     except Exception as error:  # noqa: BLE001
         print('changes.json NOT published: %s' % error)
