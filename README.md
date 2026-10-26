@@ -75,9 +75,9 @@ id. A net count hides changes that cancel out; these do not.
 <!-- releases:start -->
 | Release | Countries | Divisions | Settlements | Added | Removed | Renamed | Moved > 1 km |
 |---|--:|--:|--:|--:|--:|--:|--:|
+| [`2026-10-26T1426Z`](https://geo.mindstellar.com/releases/2026-10-26T1426Z/manifest.json) | 255 (0) | 4,316 (+2) | 1,697,155 (+25,760) | 26,439 | 679 | 5,846 | 421 |
 | [`2026-09-20T1335Z`](https://geo.mindstellar.com/releases/2026-09-20T1335Z/manifest.json) | 255 (0) | 4,314 (−2) | 1,671,395 (+2,769) | 3,500 | 731 | 17,373 | 1,197 |
 | [`2026-08-22T0451Z`](https://geo.mindstellar.com/releases/2026-08-22T0451Z/manifest.json) | 255 (0) | 4,316 (−12) | 1,668,626 (−6,321) | 497 | 6,818 | 5,147 | 0 |
-| [`2026-08-15T0426Z`](https://geo.mindstellar.com/releases/2026-08-15T0426Z/manifest.json) | 255 | 4,328 | 1,674,947 | first |  |  |  |
 <!-- releases:end -->
 
 "Moved" is a coordinate that changed by more than 1 km. Counts are as
